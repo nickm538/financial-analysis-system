@@ -36,9 +36,17 @@ class ComprehensiveFundamentals:
         return session
 
     def _safe_float(self, value: Any, default: float = 0.0) -> float:
-        """Safely convert value to float"""
+        """Safely convert value to float, handling nested Massive API structure"""
         if value is None or value == 'None' or value == '': 
             return default
+        
+        # Handle Massive API nested structure: {'value': 123.45, 'unit': 'USD', ...}
+        if isinstance(value, dict):
+            if 'value' in value:
+                value = value['value']
+            else:
+                return default
+        
         try:
             return float(value)
         except (ValueError, TypeError):
@@ -307,12 +315,29 @@ class ComprehensiveFundamentals:
             metrics['cash_ratio'] = self._safe_float(finnhub_data.get('cashRatioQuarterly', 0))
         # Calculate manually if still zero
         if metrics['cash_ratio'] == 0:
+            # Try multiple field names for cash
             cash = self._safe_float(massive_data.get('cash_and_equivalents', 0))
             if cash == 0:
                 cash = self._safe_float(massive_data.get('cash', 0))
+            if cash == 0:
+                cash = self._safe_float(massive_data.get('cash_and_cash_equivalents', 0))
+            if cash == 0:
+                cash = self._safe_float(massive_data.get('cash_and_short_term_investments', 0))
+            if cash == 0:
+                # Try from Finnhub
+                cash = self._safe_float(finnhub_data.get('cashAndCashEquivalentsAnnual', 0))
+            if cash == 0:
+                cash = self._safe_float(finnhub_data.get('cashAndCashEquivalentsQuarterly', 0))
+            
             current_liabilities = self._safe_float(massive_data.get('current_liabilities', 0))
-            if current_liabilities > 0:
+            if current_liabilities == 0:
+                current_liabilities = self._safe_float(finnhub_data.get('currentLiabilitiesAnnual', 0))
+            if current_liabilities == 0:
+                current_liabilities = self._safe_float(finnhub_data.get('currentLiabilitiesQuarterly', 0))
+            
+            if current_liabilities > 0 and cash > 0:
                 metrics['cash_ratio'] = cash / current_liabilities
+                print(f"   ℹ️ INFO: Calculated cash_ratio = {cash:,.0f} / {current_liabilities:,.0f} = {metrics['cash_ratio']:.4f}")
         
         # ========== LEVERAGE & SOLVENCY METRICS ==========
         
