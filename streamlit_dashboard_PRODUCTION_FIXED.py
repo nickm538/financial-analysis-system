@@ -1461,8 +1461,8 @@ if analyze_button and ticker:
             if ORACLE_AVAILABLE:
                 # Get price data for Oracle analysis
                 try:
-                    price_data = alphavantage_client.get_daily_prices(ticker, outputsize='compact')
-                    if price_data.empty:
+                    price_data = alphavantage_client.get_historical_data(ticker)
+                    if price_data is None or price_data.empty:
                         st.warning("⚠️ No price data available for Oracle analysis")
                     else:
                         # Get latest metrics
@@ -1487,9 +1487,16 @@ if analyze_button and ticker:
                             
                             # Calculate risk/reward from actual levels
                             try:
-                                levels_analysis = oracle_levels.calculate_oracle_levels(price_data)
-                                nearest_support = levels_analysis.get('nearest_support', current_price * 0.95)
-                                nearest_resistance = levels_analysis.get('nearest_resistance', current_price * 1.10)
+                                levels_analysis = oracle_levels.calculate_all_levels(price_data, current_price)
+                                position_info = levels_analysis.get('position', {})
+                                
+                                # Extract nearest levels from position analysis
+                                nearest_support_obj = position_info.get('nearest_support')
+                                nearest_resistance_obj = position_info.get('nearest_resistance')
+                                
+                                # Get level values (with fallback)
+                                nearest_support = nearest_support_obj['level'] if nearest_support_obj else current_price * 0.95
+                                nearest_resistance = nearest_resistance_obj['level'] if nearest_resistance_obj else current_price * 1.10
                                 
                                 entry = current_price
                                 stop = nearest_support
@@ -1697,7 +1704,7 @@ if analyze_button and ticker:
                         # Section 5: Support/Resistance Levels
                         st.markdown("### 🎯 Support & Resistance Levels")
                         
-                        levels_analysis = oracle_levels.calculate_oracle_levels(price_data)
+                        levels_analysis = oracle_levels.calculate_all_levels(price_data, current_price)
                         levels_dict = levels_analysis.get('levels', {})
                         
                         col1, col2 = st.columns(2)
