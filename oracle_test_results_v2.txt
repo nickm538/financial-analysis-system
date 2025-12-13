@@ -1,0 +1,94 @@
+
+############################################################
+# ORACLE SYSTEM - LIVE MARKET DATA VALIDATION
+# Date: 2025-12-13 00:10:00
+############################################################
+
+============================================================
+TEST 4: COMPLETE ORACLE SYSTEM - AAPL
+============================================================
+
+============================================================
+TEST 1: FLOAT EXTRACTION - AAPL
+============================================================
+⚠️ Yahoo Finance returned status 404
+
+✅ Float Data Retrieved:
+   Source: Finviz
+   Float: 14,760,000,000
+   Shares Outstanding: 14,770,000,000
+   Insider Ownership: 0.10%
+   Institutional Ownership: 64.89%
+
+✅ PASS: Float data extracted successfully
+
+============================================================
+TEST 2: SUPPORT/RESISTANCE CALCULATION - AAPL
+============================================================
+
+📊 Fetching intraday data from TwelveData...
+✅ Fetched 390 1-minute candles
+
+❌ ERROR testing AAPL: OracleLevelsEnhanced.calculate_all_levels() missing 1 required positional argument: 'current_price'
+
+
+============================================================
+TEST 4: COMPLETE ORACLE SYSTEM - TSLA
+============================================================
+
+============================================================
+TEST 1: FLOAT EXTRACTION - TSLA
+============================================================
+⚠️ Yahoo Finance returned status 404
+
+✅ Float Data Retrieved:
+   Source: Finviz
+   Float: 2,390,000,000
+   Shares Outstanding: 3,320,000,000
+   Insider Ownership: 28.18%
+   Institutional Ownership: 48.78%
+
+✅ PASS: Float data extracted successfully
+
+============================================================
+TEST 2: SUPPORT/RESISTANCE CALCULATION - TSLA
+============================================================
+
+📊 Fetching intraday data from TwelveData...
+✅ Fetched 390 1-minute candles
+
+❌ ERROR testing TSLA: OracleLevelsEnhanced.calculate_all_levels() missing 1 required positional argument: 'current_price'
+
+
+============================================================
+TEST 4: COMPLETE ORACLE SYSTEM - NVDA
+============================================================
+
+============================================================
+TEST 1: FLOAT EXTRACTION - NVDA
+============================================================
+⚠️ Yahoo Finance returned status 404
+
+✅ Float Data Retrieved:
+   Source: Finviz
+   Float: 23,310,000,000
+   Shares Outstanding: 24,300,000,000
+   Insider Ownership: 4.06%
+   Institutional Ownership: 68.18%
+
+✅ PASS: Float data extracted successfully
+
+============================================================
+TEST 2: SUPPORT/RESISTANCE CALCULATION - NVDA
+============================================================
+
+📊 Fetching intraday data from TwelveData...
+✅ Fetched 390 1-minute candles
+
+❌ ERROR testing NVDA: OracleLevelsEnhanced.calculate_all_levels() missing 1 required positional argument: 'current_price'
+
+
+############################################################
+# ALL TESTS COMPLETE
+############################################################
+

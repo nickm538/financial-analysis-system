@@ -1,0 +1,145 @@
+
+############################################################
+# ORACLE SYSTEM - LIVE MARKET DATA VALIDATION
+# Date: 2025-12-13 00:12:13
+############################################################
+
+============================================================
+TEST 4: COMPLETE ORACLE SYSTEM - AAPL
+============================================================
+
+============================================================
+TEST 1: FLOAT EXTRACTION - AAPL
+============================================================
+⚠️ Yahoo Finance returned status 404
+
+✅ Float Data Retrieved:
+   Source: Finviz
+   Float: 14,760,000,000
+   Shares Outstanding: 14,770,000,000
+   Insider Ownership: 0.10%
+   Institutional Ownership: 64.89%
+
+✅ PASS: Float data extracted successfully
+
+============================================================
+TEST 2: SUPPORT/RESISTANCE CALCULATION - AAPL
+============================================================
+
+📊 Fetching intraday data from TwelveData...
+✅ Fetched 390 1-minute candles
+
+✅ Support/Resistance Levels:
+
+   Resistance Levels: (10 found)
+      $278.38 - Type: Volume - Very Strong 🔴
+      $278.39 - Type: Volume - Very Strong 🔴
+      $278.39 - Type: Volume - Very Strong 🔴
+
+   Support Levels: (10 found)
+      $278.36 - Type: Volume - Very Strong 🔴
+      $278.36 - Type: Volume - Very Strong 🔴
+      $278.36 - Type: Volume - Very Strong 🔴
+
+   Pivot Points:
+      Pivot: $278.29
+      R1: $278.46
+      S1: $278.20
+
+❌ ERROR testing AAPL: Invalid format specifier '.2f if vwap_val else 'N/A'' for object of type 'float'
+
+
+============================================================
+TEST 4: COMPLETE ORACLE SYSTEM - TSLA
+============================================================
+
+============================================================
+TEST 1: FLOAT EXTRACTION - TSLA
+============================================================
+⚠️ Yahoo Finance returned status 404
+
+✅ Float Data Retrieved:
+   Source: Finviz
+   Float: 2,390,000,000
+   Shares Outstanding: 3,320,000,000
+   Insider Ownership: 28.18%
+   Institutional Ownership: 48.78%
+
+✅ PASS: Float data extracted successfully
+
+============================================================
+TEST 2: SUPPORT/RESISTANCE CALCULATION - TSLA
+============================================================
+
+📊 Fetching intraday data from TwelveData...
+✅ Fetched 390 1-minute candles
+
+✅ Support/Resistance Levels:
+
+   Resistance Levels: (10 found)
+      $459.46 - Type: Pivot - R1 🔵
+      $459.74 - Type: Volume - Very Strong 🔴
+      $459.76 - Type: Pivot - R2 🔵
+
+   Support Levels: (10 found)
+      $459.05 - Type: Volume - Very Strong 🔴
+      $458.94 - Type: Volume - Very Strong 🔴
+      $458.88 - Type: Volume - Very Strong 🔴
+
+   Pivot Points:
+      Pivot: $458.88
+      R1: $459.46
+      S1: $458.58
+
+❌ ERROR testing TSLA: Invalid format specifier '.2f if vwap_val else 'N/A'' for object of type 'float'
+
+
+============================================================
+TEST 4: COMPLETE ORACLE SYSTEM - NVDA
+============================================================
+
+============================================================
+TEST 1: FLOAT EXTRACTION - NVDA
+============================================================
+⚠️ Yahoo Finance returned status 404
+
+✅ Float Data Retrieved:
+   Source: Finviz
+   Float: 23,310,000,000
+   Shares Outstanding: 24,300,000,000
+   Insider Ownership: 4.06%
+   Institutional Ownership: 68.18%
+
+✅ PASS: Float data extracted successfully
+
+============================================================
+TEST 2: SUPPORT/RESISTANCE CALCULATION - NVDA
+============================================================
+
+📊 Fetching intraday data from TwelveData...
+✅ Fetched 390 1-minute candles
+
+✅ Support/Resistance Levels:
+
+   Resistance Levels: (10 found)
+      $175.00 - Type: Volume - Very Strong 🔴
+      $175.01 - Type: Volume - Very Strong 🔴
+      $175.02 - Type: Volume - Very Strong 🔴
+
+   Support Levels: (10 found)
+      $174.95 - Type: Volume - Very Strong 🔴
+      $174.91 - Type: Pivot - S1 🔵
+      $174.90 - Type: Volume - Very Strong 🔴
+
+   Pivot Points:
+      Pivot: $175.00
+      R1: $175.09
+      S1: $174.91
+
+❌ ERROR testing NVDA: Invalid format specifier '.2f if vwap_val else 'N/A'' for object of type 'float'
+
+
+############################################################
+# ALL TESTS COMPLETE
+############################################################
+

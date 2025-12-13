@@ -51,7 +51,7 @@ class OracleAlgorithm:
         self.FLOAT_LIMIT_MAX = 20_000_000  # 20M maximum
         self.VOLUME_SURGE_MIN = 3.0  # 3x average volume minimum
         self.CLOSE_POSITION_MIN = 0.9  # Close in top 10% of range
-        self.SECTOR_MOMENTUM_MIN = 0.7  # Sector strength threshold
+        # Sector momentum will be calculated dynamically from market data
         self.SCORE_THRESHOLD = 75  # Minimum score for A+ setup
         
         # High-Impact News Keywords (Tim Bohen's List)
@@ -157,15 +157,16 @@ class OracleAlgorithm:
             breakdown['news_catalyst'] = news_score
             
             # 4. Sector Momentum (15 points max)
+            # Sector momentum is calculated from market data (0.0 to 1.0 scale)
             sector_momentum = self._safe_float(market_data.get('sector_momentum', 0))
             if sector_momentum >= 0.9:
-                sector_score = 15
-            elif sector_momentum >= self.SECTOR_MOMENTUM_MIN:
-                sector_score = 10
+                sector_score = 15  # Hot sector with multiple runners
+            elif sector_momentum >= 0.7:
+                sector_score = 10  # Strong sector momentum
             elif sector_momentum >= 0.5:
-                sector_score = 5
+                sector_score = 5   # Moderate sector interest
             else:
-                sector_score = 0
+                sector_score = 0   # Weak or no sector momentum
             
             score += sector_score
             breakdown['sector_momentum'] = sector_score
