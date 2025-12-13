@@ -1443,7 +1443,7 @@ if analyze_button and ticker:
             # Import Oracle modules
             try:
                 from oracle_algorithm import OracleAlgorithm
-                from oracle_levels import OracleLevels
+                from oracle_levels import OracleLevelsEnhanced as OracleLevels
                 from oracle_news import OracleNews
                 from oracle_float import OracleFloat
                 
