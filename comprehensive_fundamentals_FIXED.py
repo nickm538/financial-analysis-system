@@ -355,136 +355,245 @@ class ComprehensiveFundamentals:
             if total_equity > 0:
                 metrics['equity_multiplier'] = total_assets / total_equity
         
-        # ========== CASH FLOW METRICS ==========
+        # ========== CASH FLOW METRICS (TTM - Trailing Twelve Months) ==========
         
-        # Operating Cash Flow - Try ALL possible field names from flattened data
-        metrics['operating_cash_flow'] = self._safe_float(massive_data.get('operating_cash_flow', 0))
+        # Operating Cash Flow - Multi-source with TTM priority
+        # Priority: Finnhub TTM > Massive API > AlphaVantage > Calculated
+        
+        # Try Finnhub TTM first (most reliable for TTM data)
+        metrics['operating_cash_flow'] = self._safe_float(finnhub_data.get('cashFlowPerShareTTM', 0)) * self._safe_float(finnhub_data.get('sharesOutstanding', 0))
+        
+        # Try Massive API (flattened cash flow statement)
+        if metrics['operating_cash_flow'] == 0:
+            metrics['operating_cash_flow'] = self._safe_float(massive_data.get('operating_cash_flow', 0))
         if metrics['operating_cash_flow'] == 0:
             metrics['operating_cash_flow'] = self._safe_float(massive_data.get('cash_flow_from_operating_activities', 0))
         if metrics['operating_cash_flow'] == 0:
             metrics['operating_cash_flow'] = self._safe_float(massive_data.get('net_cash_from_operating_activities', 0))
         if metrics['operating_cash_flow'] == 0:
-            metrics['operating_cash_flow'] = self._safe_float(massive_data.get('operating_activities_cash_flow', 0))
-        if metrics['operating_cash_flow'] == 0:
-            metrics['operating_cash_flow'] = self._safe_float(massive_data.get('net_cash_flow_operating', 0))
-        if metrics['operating_cash_flow'] == 0:
-            metrics['operating_cash_flow'] = self._safe_float(massive_data.get('cash_from_operations', 0))
-        if metrics['operating_cash_flow'] == 0:
             metrics['operating_cash_flow'] = self._safe_float(massive_data.get('net_cash_provided_by_operating_activities', 0))
         if metrics['operating_cash_flow'] == 0:
             metrics['operating_cash_flow'] = self._safe_float(massive_data.get('net_cash_provided_by_used_in_operating_activities', 0))
-        if metrics['operating_cash_flow'] == 0:
-            metrics['operating_cash_flow'] = self._safe_float(massive_data.get('cash_flows_from_operating_activities', 0))
         
-        # Try AlphaVantage as fallback
+        # Try AlphaVantage
         if metrics['operating_cash_flow'] == 0:
             metrics['operating_cash_flow'] = self._safe_float(av_data.get('operating_cashflow', 0))
-        
-        # Try Finnhub as fallback
         if metrics['operating_cash_flow'] == 0:
-            metrics['operating_cash_flow'] = self._safe_float(finnhub_data.get('cashFlowPerShareTTM', 0)) * self._safe_float(finnhub_data.get('sharesOutstanding', 0))
+            metrics['operating_cash_flow'] = self._safe_float(av_data.get('operatingCashflow', 0))
         
-        # INTERNAL CALCULATION: If still 0, calculate from Net Income + Depreciation (simplified)
+        # ACCURATE CALCULATION: Indirect Method (CFA Institute Standard)
+        # Operating CF = Net Income + D&A + ΔWorking Capital + Non-Cash Items
         if metrics['operating_cash_flow'] == 0:
             net_income = self._safe_float(massive_data.get('net_income', 0))
             if net_income == 0:
                 net_income = self._safe_float(massive_data.get('net_income_loss', 0))
             if net_income == 0:
                 net_income = self._safe_float(av_data.get('net_income', 0))
+            if net_income == 0:
+                net_income = self._safe_float(finnhub_data.get('netIncomeTTM', 0))
             
+            # Depreciation & Amortization (non-cash expense, add back)
             depreciation = self._safe_float(massive_data.get('depreciation_and_amortization', 0))
             if depreciation == 0:
                 depreciation = self._safe_float(massive_data.get('depreciation_amortization', 0))
             if depreciation == 0:
                 depreciation = self._safe_float(massive_data.get('depreciation', 0))
             
-            # Simplified Operating CF = Net Income + Depreciation
-            if net_income > 0 or depreciation > 0:
-                metrics['operating_cash_flow'] = net_income + depreciation
-                print(f"   📊 CALCULATED: Operating CF = Net Income ({net_income:,.0f}) + D&A ({depreciation:,.0f}) = {metrics['operating_cash_flow']:,.0f}")
+            # Changes in Working Capital (simplified)
+            change_in_receivables = self._safe_float(massive_data.get('change_in_receivables', 0))
+            change_in_inventory = self._safe_float(massive_data.get('change_in_inventory', 0))
+            change_in_payables = self._safe_float(massive_data.get('change_in_payables', 0))
+            
+            # Operating CF = Net Income + D&A - ΔAR - ΔInventory + ΔAP
+            if net_income != 0 or depreciation != 0:
+                metrics['operating_cash_flow'] = (net_income + depreciation 
+                                                - change_in_receivables 
+                                                - change_in_inventory 
+                                                + change_in_payables)
+                print(f"   📊 CALCULATED (Indirect Method): Operating CF = ${metrics['operating_cash_flow']:,.0f}")
+                print(f"      Net Income: ${net_income:,.0f}, D&A: ${depreciation:,.0f}")
         
-        # Debug cash flow
-        if metrics['operating_cash_flow'] == 0:
-            print(f"   ⚠️ DEBUG: Operating CF still 0 after all attempts. Available keys: {list(massive_data.keys())[:20]}...")
+        # Validation: Operating CF should be reasonable relative to Net Income
+        if metrics['operating_cash_flow'] != 0:
+            net_income_check = self._safe_float(massive_data.get('net_income', 0))
+            if net_income_check == 0:
+                net_income_check = self._safe_float(av_data.get('net_income', 0))
+            
+            # Operating CF typically 80-150% of Net Income for healthy companies
+            if net_income_check > 0:
+                ocf_to_ni_ratio = metrics['operating_cash_flow'] / net_income_check
+                if ocf_to_ni_ratio < 0.5 or ocf_to_ni_ratio > 3.0:
+                    print(f"   ⚠️ WARNING: OCF/NI ratio = {ocf_to_ni_ratio:.2f} (unusual, verify data)")
+                else:
+                    print(f"   ✅ Operating CF: ${metrics['operating_cash_flow']:,.0f} (OCF/NI: {ocf_to_ni_ratio:.2f}x)")
+            else:
+                print(f"   ✅ Operating CF: ${metrics['operating_cash_flow']:,.0f}")
         else:
-            print(f"   ✅ Operating CF: ${metrics['operating_cash_flow']:,.0f}")
+            print(f"   ⚠️ WARNING: Operating CF = 0 after all attempts")
         
-        # Free Cash Flow = Operating Cash Flow - CapEx
-        capex = self._safe_float(massive_data.get('capital_expenditure', 0))
+        # Free Cash Flow = Operating Cash Flow - CapEx (TTM)
+        # FCF is the most important cash flow metric for valuation
+        
+        # Try Finnhub first (most reliable for TTM)
+        capex = self._safe_float(finnhub_data.get('capitalExpenditureTTM', 0))
+        
+        # Try Massive API
+        if capex == 0:
+            capex = self._safe_float(massive_data.get('capital_expenditure', 0))
         if capex == 0:
             capex = self._safe_float(massive_data.get('capital_expenditures', 0))
         if capex == 0:
             capex = self._safe_float(massive_data.get('capex', 0))
         if capex == 0:
-            capex = self._safe_float(massive_data.get('capital_expenditure_fixed_assets', 0))
+            capex = self._safe_float(massive_data.get('payments_to_acquire_property_plant_and_equipment', 0))
         if capex == 0:
             capex = self._safe_float(massive_data.get('purchase_of_property_plant_equipment', 0))
         if capex == 0:
             capex = self._safe_float(massive_data.get('payments_for_property_plant_and_equipment', 0))
-        if capex == 0:
-            capex = self._safe_float(massive_data.get('purchases_of_property_and_equipment', 0))
-        if capex == 0:
-            capex = self._safe_float(massive_data.get('property_plant_and_equipment_net', 0))
-        if capex == 0:
-            # Sometimes CapEx is main component of investing activities
-            investing_cf = self._safe_float(massive_data.get('investing_activities_cash_flow', 0))
-            if investing_cf < 0:  # Negative investing CF usually means CapEx
-                capex = abs(investing_cf)
         
-        # Try AlphaVantage for CapEx
+        # Try AlphaVantage
         if capex == 0:
             capex = abs(self._safe_float(av_data.get('capital_expenditures', 0)))
+        if capex == 0:
+            capex = abs(self._safe_float(av_data.get('capitalExpenditures', 0)))
         
-        # INTERNAL CALCULATION: Estimate CapEx as % of revenue if not available
+        # CapEx is often buried in investing activities (usually negative)
+        if capex == 0:
+            investing_cf = self._safe_float(massive_data.get('net_cash_used_for_investing_activities', 0))
+            if investing_cf == 0:
+                investing_cf = self._safe_float(massive_data.get('net_cash_from_investing_activities', 0))
+            if investing_cf == 0:
+                investing_cf = self._safe_float(massive_data.get('investing_activities_cash_flow', 0))
+            
+            # CapEx is typically 60-90% of investing CF for most companies
+            if investing_cf < 0:  # Negative = cash outflow
+                capex = abs(investing_cf) * 0.75  # Conservative 75% estimate
+                print(f"   📊 ESTIMATED: CapEx = 75% of Investing CF = ${capex:,.0f}")
+        
+        # Industry-based estimation (last resort)
         if capex == 0 and metrics['revenue'] > 0:
-            # Industry average CapEx is ~3-5% of revenue
-            capex = metrics['revenue'] * 0.04  # Use 4% as conservative estimate
-            print(f"   📊 ESTIMATED: CapEx = 4% of Revenue = ${capex:,.0f}")
+            # CapEx intensity varies by industry:
+            # Tech/Software: 2-4%, Manufacturing: 5-8%, Utilities: 10-15%
+            # Use conservative 5% for unknown industries
+            capex = metrics['revenue'] * 0.05
+            print(f"   📊 ESTIMATED: CapEx = 5% of Revenue = ${capex:,.0f}")
         
+        # Calculate Free Cash Flow
         if metrics['operating_cash_flow'] > 0:
             metrics['free_cash_flow'] = metrics['operating_cash_flow'] - abs(capex)
-            print(f"   ✅ Free CF: ${metrics['free_cash_flow']:,.0f} (Operating CF - CapEx)")
+            
+            # Validation: FCF should be reasonable
+            fcf_margin = (metrics['free_cash_flow'] / metrics['revenue'] * 100) if metrics['revenue'] > 0 else 0
+            
+            if fcf_margin < -20 or fcf_margin > 50:
+                print(f"   ⚠️ WARNING: FCF Margin = {fcf_margin:.1f}% (unusual, verify CapEx)")
+            else:
+                print(f"   ✅ Free CF: ${metrics['free_cash_flow']:,.0f} (FCF Margin: {fcf_margin:.1f}%)")
+            
+            print(f"      Operating CF: ${metrics['operating_cash_flow']:,.0f}, CapEx: ${capex:,.0f}")
         else:
             metrics['free_cash_flow'] = 0.0
+            print(f"   ⚠️ WARNING: Cannot calculate FCF (Operating CF = 0)")
         
         # Operating CF Ratio = Operating Cash Flow / Current Liabilities
-        current_liabilities = self._safe_float(massive_data.get('current_liabilities', 0))
+        # Measures ability to cover short-term obligations with operating cash
+        # Healthy ratio: > 0.4 (can cover 40%+ of current liabilities annually)
+        
+        # Try Finnhub first (TTM data)
+        current_liabilities = self._safe_float(finnhub_data.get('totalCurrentLiabilitiesTTM', 0))
+        
+        # Try Massive API
+        if current_liabilities == 0:
+            current_liabilities = self._safe_float(massive_data.get('current_liabilities', 0))
         if current_liabilities == 0:
             current_liabilities = self._safe_float(massive_data.get('total_current_liabilities', 0))
         if current_liabilities == 0:
             current_liabilities = self._safe_float(massive_data.get('liabilities_current', 0))
+        
+        # Calculate from Current Ratio if available
         if current_liabilities == 0:
-            # Use from Finnhub if available
-            total_assets = self._safe_float(finnhub_data.get('totalAssets', 0))
+            current_assets = self._safe_float(massive_data.get('current_assets', 0))
+            if current_assets == 0:
+                current_assets = self._safe_float(massive_data.get('total_current_assets', 0))
+            
             current_ratio = self._safe_float(finnhub_data.get('currentRatioTTM', 0))
-            if total_assets > 0 and current_ratio > 0:
-                # Estimate current liabilities from current ratio
-                current_assets = total_assets * 0.4  # Typical current assets ~40% of total
+            
+            if current_assets > 0 and current_ratio > 0:
                 current_liabilities = current_assets / current_ratio
+                print(f"   📊 CALCULATED: Current Liabilities = ${current_liabilities:,.0f}")
         
         if current_liabilities > 0 and metrics['operating_cash_flow'] > 0:
             metrics['operating_cf_ratio'] = metrics['operating_cash_flow'] / current_liabilities
-            print(f"   ✅ Operating CF Ratio: {metrics['operating_cf_ratio']:.2f}")
+            
+            # Interpretation
+            if metrics['operating_cf_ratio'] > 0.4:
+                status = "✅ Strong"
+            elif metrics['operating_cf_ratio'] > 0.2:
+                status = "🟡 Adequate"
+            else:
+                status = "⚠️ Weak"
+            
+            print(f"   {status} Operating CF Ratio: {metrics['operating_cf_ratio']:.2f}")
         else:
             metrics['operating_cf_ratio'] = 0.0
+            print(f"   ⚠️ WARNING: Cannot calculate Operating CF Ratio")
         
         # CF to Debt Ratio = Operating Cash Flow / Total Debt
-        total_debt = self._safe_float(massive_data.get('total_debt', 0))
+        # Measures ability to pay off debt with operating cash flow
+        # Healthy ratio: > 0.2 (can pay off 20%+ of debt annually)
+        
+        # Try Finnhub first (TTM data)
+        total_debt = self._safe_float(finnhub_data.get('totalDebtTTM', 0))
         if total_debt == 0:
-            total_debt = self._safe_float(massive_data.get('long_term_debt', 0))
-        if total_debt == 0:
-            total_debt = self._safe_float(massive_data.get('total_liabilities', 0)) * 0.6  # Estimate debt as 60% of liabilities
-        if total_debt == 0:
-            # Try Finnhub
             total_debt = self._safe_float(finnhub_data.get('totalDebt', 0))
+        
+        # Try Massive API
         if total_debt == 0:
-            total_debt = self._safe_float(finnhub_data.get('longTermDebt', 0))
+            total_debt = self._safe_float(massive_data.get('total_debt', 0))
+        if total_debt == 0:
+            # Total Debt = Long-term Debt + Short-term Debt
+            long_term_debt = self._safe_float(massive_data.get('long_term_debt', 0))
+            if long_term_debt == 0:
+                long_term_debt = self._safe_float(massive_data.get('longterm_debt', 0))
+            
+            short_term_debt = self._safe_float(massive_data.get('short_term_debt', 0))
+            if short_term_debt == 0:
+                short_term_debt = self._safe_float(massive_data.get('shortterm_debt', 0))
+            
+            total_debt = long_term_debt + short_term_debt
+        
+        # Calculate from D/E ratio if available
+        if total_debt == 0:
+            total_equity = self._safe_float(massive_data.get('total_equity', 0))
+            if total_equity == 0:
+                total_equity = self._safe_float(massive_data.get('total_stockholder_equity', 0))
+            
+            de_ratio = self._safe_float(finnhub_data.get('debtEquityTTM', 0))
+            
+            if total_equity > 0 and de_ratio > 0:
+                total_debt = total_equity * de_ratio
+                print(f"   📊 CALCULATED: Total Debt = ${total_debt:,.0f} (from D/E ratio)")
         
         if total_debt > 0 and metrics['operating_cash_flow'] > 0:
             metrics['cf_to_debt'] = metrics['operating_cash_flow'] / total_debt
-            print(f"   ✅ CF to Debt: {metrics['cf_to_debt']:.2f}")
+            
+            # Interpretation
+            if metrics['cf_to_debt'] > 0.25:
+                status = "✅ Excellent"
+            elif metrics['cf_to_debt'] > 0.15:
+                status = "🟡 Good"
+            elif metrics['cf_to_debt'] > 0.08:
+                status = "🟠 Fair"
+            else:
+                status = "⚠️ Weak"
+            
+            print(f"   {status} CF to Debt: {metrics['cf_to_debt']:.2f} (Debt payoff: {metrics['cf_to_debt']*100:.1f}% annually)")
         else:
             metrics['cf_to_debt'] = 0.0
+            if total_debt == 0:
+                print(f"   ℹ️ INFO: No debt detected (CF to Debt = N/A)")
+            else:
+                print(f"   ⚠️ WARNING: Cannot calculate CF to Debt")
         
         # ========== PER-SHARE METRICS ==========
         

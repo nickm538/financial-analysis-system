@@ -1164,20 +1164,42 @@ if analyze_button and ticker:
                         st.caption("📊 Neutral range")
                 
                 with col2:
-                    # Awesome Oscillator
+                    # Awesome Oscillator (Bill Williams)
+                    # AO = SMA(5) of midpoints - SMA(34) of midpoints
+                    # Measures market momentum using 5-period vs 34-period moving averages
+                    # Positive = bullish momentum, Negative = bearish momentum
+                    # Crossover of zero line = momentum shift signal
+                    
                     ao_raw = indicators.get('awesome_oscillator')
                     if ao_raw is not None:
-                        ao = get_val(ao_raw, default=0.0)
-                        st.metric("Awesome Oscillator", f"{ao:.2f}")
-                        if ao > 0.5:
-                            st.caption("✅ Bullish momentum")
-                        elif ao < -0.5:
-                            st.caption("🔴 Bearish momentum")
+                        ao = get_val(ao_raw, default=None)
+                        
+                        if ao is not None:
+                            # Display with proper formatting
+                            st.metric("Awesome Oscillator", f"{ao:.4f}")
+                            
+                            # Professional interpretation (Bill Williams methodology)
+                            if ao > 0.1:
+                                st.caption("✅ Bullish: Short-term momentum > Long-term")
+                            elif ao < -0.1:
+                                st.caption("🔴 Bearish: Short-term momentum < Long-term")
+                            elif -0.1 <= ao <= 0.1:
+                                if ao > 0:
+                                    st.caption("🟢 Weak Bullish: Near equilibrium, slight upside")
+                                elif ao < 0:
+                                    st.caption("🟡 Weak Bearish: Near equilibrium, slight downside")
+                                else:
+                                    st.caption("⚪ Neutral: Momentum equilibrium (zero line)")
+                            
+                            # Trading context
+                            if abs(ao) < 0.05:
+                                st.caption("📊 Context: Potential momentum shift zone")
                         else:
-                            st.caption("📊 Near-zero momentum")
+                            st.metric("Awesome Oscillator", "N/A")
+                            st.caption("⚠️ Data unavailable for this symbol")
                     else:
                         st.metric("Awesome Oscillator", "N/A")
-                        st.caption("⚠️ Data unavailable")
+                        st.caption("⚠️ Indicator not fetched")
                 
                 with col3:
                     # Chaikin Oscillator
