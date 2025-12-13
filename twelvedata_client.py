@@ -139,18 +139,25 @@ class TwelveDataClient:
         Fetch all critical technical indicators for dashboard display.
         Returns normalized data structure ready for consumption.
         """
+        total_indicators = 16  # Total number of indicators to fetch (DMI = 2 calls)
+        current = 0
         print(f"\n📊 Fetching all technical indicators for {symbol} ({interval})...")
+        print(f"⏱️  This will take ~2 minutes due to rate limiting (8 req/min free tier)")
         
         indicators = {}
         
         # ========== MOMENTUM INDICATORS ==========
         
         # RSI (Relative Strength Index)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching RSI...")
         rsi_data = self._fetch_indicator(symbol, 'rsi', interval, time_period=14)
         if rsi_data:
             indicators['rsi'] = self._safe_float(rsi_data.get('rsi', 0))
         
         # Stochastic RSI (Stochastic applied to RSI)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching Stochastic RSI...")
         stochrsi_data = self._fetch_indicator(symbol, 'stochrsi', interval, time_period=14)
         if stochrsi_data:
             # TwelveData returns 'k' and 'd' (not 'fast_k' and 'fast_d')
@@ -177,6 +184,8 @@ class TwelveDataClient:
                 print(f"   ✅ Stochastic RSI: K={k_value:.2f}, D={d_value:.2f}")
         
         # MACD (Moving Average Convergence Divergence)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching MACD...")
         macd_data = self._fetch_indicator(symbol, 'macd', interval, 
                                           fast_period=12, slow_period=26, signal_period=9)
         if macd_data:
@@ -187,11 +196,15 @@ class TwelveDataClient:
             }
         
         # CCI (Commodity Channel Index)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching CCI...")
         cci_data = self._fetch_indicator(symbol, 'cci', interval, time_period=20)
         if cci_data:
             indicators['cci'] = self._safe_float(cci_data.get('cci', 0))
         
         # Stochastic Oscillator
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching Stochastic...")
         stoch_data = self._fetch_indicator(symbol, 'stoch', interval, 
                                            fast_k_period=14, slow_k_period=3, slow_d_period=3)
         if stoch_data:
@@ -201,6 +214,8 @@ class TwelveDataClient:
             }
         
         # Williams %R
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching Williams %R...")
         willr_data = self._fetch_indicator(symbol, 'willr', interval, time_period=14)
         if willr_data:
             willr_value = self._safe_float(willr_data.get('willr', 0))
@@ -217,6 +232,8 @@ class TwelveDataClient:
         # ========== TREND INDICATORS ==========
         
         # ADX (Average Directional Index)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching ADX...")
         adx_data = self._fetch_indicator(symbol, 'adx', interval, time_period=14)
         if adx_data:
             indicators['adx'] = {
@@ -224,7 +241,11 @@ class TwelveDataClient:
             }
         
         # DMI (Directional Movement Index) - Plus DI and Minus DI
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching DMI (Plus DI)...")
         plus_di_data = self._fetch_indicator(symbol, 'plus_di', interval, time_period=14)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching DMI (Minus DI)...")
         minus_di_data = self._fetch_indicator(symbol, 'minus_di', interval, time_period=14)
         
         if plus_di_data and minus_di_data:
@@ -237,6 +258,8 @@ class TwelveDataClient:
             }
         
         # Bollinger Bands
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching Bollinger Bands...")
         bbands_data = self._fetch_indicator(symbol, 'bbands', interval, 
                                             time_period=20, sd=2)
         if bbands_data:
@@ -247,16 +270,22 @@ class TwelveDataClient:
             }
         
         # ATR (Average True Range) - Volatility
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching ATR...")
         atr_data = self._fetch_indicator(symbol, 'atr', interval, time_period=14)
         if atr_data:
             indicators['atr'] = self._safe_float(atr_data.get('atr', 0))
         
         # EMA (Exponential Moving Average)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching EMA...")
         ema_data = self._fetch_indicator(symbol, 'ema', interval, time_period=20)
         if ema_data:
             indicators['ema'] = self._safe_float(ema_data.get('ema', 0))
         
         # SMA (Simple Moving Average)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching SMA...")
         sma_data = self._fetch_indicator(symbol, 'sma', interval, time_period=50)
         if sma_data:
             indicators['sma'] = self._safe_float(sma_data.get('sma', 0))
@@ -264,6 +293,8 @@ class TwelveDataClient:
         # ========== VOLUME INDICATORS ==========
         
         # OBV (On Balance Volume)
+        current += 1
+        print(f"   [{current}/{total_indicators}] Fetching OBV...")
         obv_data = self._fetch_indicator(symbol, 'obv', interval)
         if obv_data:
             indicators['obv'] = self._safe_float(obv_data.get('obv', 0))
