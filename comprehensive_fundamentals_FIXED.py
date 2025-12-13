@@ -236,12 +236,7 @@ class ComprehensiveFundamentals:
         else:
             metrics['ebitda_margin'] = 0.0
         
-        # EV/EBITDA Ratio
-        metrics['enterprise_value'] = self._safe_float(av_data.get('enterprise_value', 0))
-        if metrics['ebitda'] > 0 and metrics['enterprise_value'] > 0:
-            metrics['ev_ebitda'] = metrics['enterprise_value'] / metrics['ebitda']
-        else:
-            metrics['ev_ebitda'] = 0.0
+        # EV/EBITDA will be calculated later after debt and cash are known
         
         # ========== PROFITABILITY METRICS ==========
         
@@ -541,6 +536,9 @@ class ComprehensiveFundamentals:
             capex = metrics['revenue'] * 0.05
             print(f"   📊 ESTIMATED: CapEx = 5% of Revenue = ${capex:,.0f}")
         
+        # Store CapEx in metrics
+        metrics['capex'] = abs(capex)
+        
         # Calculate Free Cash Flow
         if metrics['operating_cash_flow'] > 0:
             metrics['free_cash_flow'] = metrics['operating_cash_flow'] - abs(capex)
@@ -747,6 +745,44 @@ class ComprehensiveFundamentals:
         if metrics['inventory_turnover'] == 0:
             metrics['inventory_turnover'] = self._safe_float(finnhub_data.get('inventoryTurnoverAnnual', 0))
         
+        # ========== EV/EBITDA CALCULATION (Must be last after debt and cash are known) ==========
+        metrics['enterprise_value'] = self._safe_float(av_data.get('enterprise_value', 0))
+        
+        # Calculate EV manually if not available
+        # EV = Market Cap + Total Debt - Cash
+        if metrics['enterprise_value'] == 0:
+            market_cap = self._safe_float(av_data.get('market_cap', 0))
+            if market_cap == 0:
+                market_cap = self._safe_float(finnhub_data.get('marketCapitalization', 0)) * 1_000_000  # Finnhub returns in millions
+            
+            # Get total debt using debt_to_equity ratio (already calculated)
+            total_debt = 0
+            if metrics.get('debt_to_equity', 0) > 0:
+                total_equity = self._safe_float(massive_data.get('total_equity', 0))
+                if total_equity == 0:
+                    total_equity = self._safe_float(massive_data.get('stockholders_equity', 0))
+                if total_equity > 0:
+                    total_debt = metrics['debt_to_equity'] * total_equity
+            
+            # Get cash using cash_ratio (already calculated)
+            cash = 0
+            if metrics.get('cash_ratio', 0) > 0:
+                current_liabilities = self._safe_float(massive_data.get('current_liabilities', 0))
+                if current_liabilities > 0:
+                    cash = metrics['cash_ratio'] * current_liabilities
+            
+            if market_cap > 0:
+                metrics['enterprise_value'] = market_cap + total_debt - cash
+                if metrics['enterprise_value'] > 0:
+                    print(f"   📊 CALCULATED: Enterprise Value = Market Cap (${market_cap:,.0f}) + Debt (${total_debt:,.0f}) - Cash (${cash:,.0f}) = ${metrics['enterprise_value']:,.0f}")
+        
+        # Calculate EV/EBITDA
+        if metrics.get('ebitda', 0) > 0 and metrics['enterprise_value'] > 0:
+            metrics['ev_ebitda'] = metrics['enterprise_value'] / metrics['ebitda']
+            print(f"   ✅ EV/EBITDA: {metrics['ev_ebitda']:.2f}")
+        else:
+            metrics['ev_ebitda'] = 0.0
+        
         return metrics
 
     def format_for_display(self, metrics: Dict) -> Dict:
@@ -773,7 +809,8 @@ class ComprehensiveFundamentals:
                     formatted[key] = "N/A"
             
             # Large currency values (Market Cap, EBITDA, Revenue, Cash Flow)
-            elif any(x in key for x in ['cap', 'ebitda', 'revenue', 'cash_flow', 'enterprise_value']):
+            # BUT NOT ev_ebitda which is a ratio
+            elif any(x in key for x in ['cap', 'ebitda', 'revenue', 'cash_flow', 'enterprise_value']) and 'ev_ebitda' not in key:
                 if val >= 1e12:
                     formatted[key] = f"${val/1e12:.2f}T"
                 elif val >= 1e9:
