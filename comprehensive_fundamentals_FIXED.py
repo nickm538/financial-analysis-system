@@ -328,6 +328,21 @@ class ComprehensiveFundamentals:
                 cash = self._safe_float(finnhub_data.get('cashAndCashEquivalentsAnnual', 0))
             if cash == 0:
                 cash = self._safe_float(finnhub_data.get('cashAndCashEquivalentsQuarterly', 0))
+            if cash == 0:
+                # Calculate from cash per share × shares outstanding
+                cash_per_share = self._safe_float(finnhub_data.get('cashPerSharePerShareAnnual', 0))
+                if cash_per_share == 0:
+                    cash_per_share = self._safe_float(finnhub_data.get('cashPerSharePerShareQuarterly', 0))
+                if cash_per_share == 0:
+                    cash_per_share = self._safe_float(finnhub_data.get('cashPerSharePerShareTTM', 0))
+                shares_outstanding = self._safe_float(finnhub_data.get('sharesOutstanding', 0))
+                if shares_outstanding == 0:
+                    shares_outstanding = self._safe_float(av_data.get('shares_outstanding', 0))
+                if shares_outstanding == 0:
+                    shares_outstanding = self._safe_float(av_data.get('SharesOutstanding', 0))
+                if cash_per_share > 0 and shares_outstanding > 0:
+                    cash = cash_per_share * shares_outstanding
+                    print(f"   📊 CALCULATED: Cash = {cash_per_share:.4f} × {shares_outstanding:,.0f} = ${cash:,.0f}")
             
             current_liabilities = self._safe_float(massive_data.get('current_liabilities', 0))
             if current_liabilities == 0:
@@ -362,10 +377,33 @@ class ComprehensiveFundamentals:
             metrics['debt_to_assets'] = self._safe_float(finnhub_data.get('totalDebt/totalAssetsQuarterly', 0))
         # Calculate manually if still zero
         if metrics['debt_to_assets'] == 0:
+            # Try to get total debt from multiple sources
             total_debt = self._safe_float(massive_data.get('total_debt', 0))
+            
+            # If not available, calculate from debt-to-equity ratio
+            if total_debt == 0 and metrics['debt_to_equity'] > 0:
+                total_equity = self._safe_float(massive_data.get('total_equity', 0))
+                if total_equity == 0:
+                    total_equity = self._safe_float(massive_data.get('stockholders_equity', 0))
+                if total_equity == 0:
+                    total_equity = self._safe_float(massive_data.get('equity', 0))
+                if total_equity > 0:
+                    total_debt = metrics['debt_to_equity'] * total_equity
+                    print(f"   📊 CALCULATED: Total Debt = D/E ({metrics['debt_to_equity']:.3f}) × Equity (${total_equity:,.0f}) = ${total_debt:,.0f}")
+            
+            # If still zero, use long-term debt as approximation
+            if total_debt == 0:
+                total_debt = self._safe_float(massive_data.get('long_term_debt', 0))
+                if total_debt > 0:
+                    print(f"   ⚠️ WARNING: Using long-term debt (${total_debt:,.0f}) as approximation for total debt")
+            
             total_assets = self._safe_float(massive_data.get('total_assets', 0))
-            if total_assets > 0:
+            if total_assets == 0:
+                total_assets = self._safe_float(massive_data.get('assets', 0))
+            
+            if total_assets > 0 and total_debt > 0:
                 metrics['debt_to_assets'] = (total_debt / total_assets) * 100
+                print(f"   ℹ️ INFO: Calculated debt_to_assets = {total_debt:,.0f} / {total_assets:,.0f} = {metrics['debt_to_assets']:.2f}%")
         
         # Interest Coverage Ratio = EBIT / Interest Expense
         metrics['interest_coverage'] = self._safe_float(finnhub_data.get('interestCoverageTTM', 0))
