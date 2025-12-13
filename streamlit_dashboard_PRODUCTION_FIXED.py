@@ -463,12 +463,13 @@ if analyze_button and ticker:
         """, unsafe_allow_html=True)
 
         # Tabs
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
             "🎯 AI Summary",
             "📊 Comprehensive Fundamentals",
             "📈 Technical Analysis",
             "💡 AI Insights",
-            "📋 Raw Data"
+            "📋 Raw Data",
+            "🔮 Oracle Scanner"
         ])
 
         # Get all cached data with error handling
@@ -1429,6 +1430,356 @@ if analyze_button and ticker:
                     file_name=f"{ticker}_technicals_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv"
                 )
+
+        # ===== TAB 6: ORACLE SCANNER =====
+        with tab6:
+            st.markdown("""
+            <div class="ai-insight">
+                <h2>🔮 Oracle Scanner - Tim Bohen Methodology</h2>
+                <p>🎯 Multi-Day Runner Detection | 5:1 Risk/Reward | A+ Setups Only</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Import Oracle modules
+            try:
+                from oracle_algorithm import OracleAlgorithm
+                from oracle_levels import OracleLevels
+                from oracle_news import OracleNews
+                from oracle_float import OracleFloat
+                
+                # Initialize Oracle engines
+                oracle = OracleAlgorithm(alphavantage_client, None, td_client)
+                oracle_levels = OracleLevels()
+                oracle_news = OracleNews(FINNHUB_API_KEY)
+                oracle_float = OracleFloat(FINNHUB_API_KEY)
+                
+                ORACLE_AVAILABLE = True
+            except Exception as e:
+                st.error(f"❌ Error loading Oracle modules: {e}")
+                ORACLE_AVAILABLE = False
+            
+            if ORACLE_AVAILABLE:
+                # Get price data for Oracle analysis
+                try:
+                    price_data = alphavantage_client.get_daily_prices(ticker, outputsize='compact')
+                    if price_data.empty:
+                        st.warning("⚠️ No price data available for Oracle analysis")
+                    else:
+                        # Get latest metrics
+                        latest = price_data.iloc[-1]
+                        current_price = float(latest['close'])
+                        current_volume = float(latest['volume'])
+                        avg_volume = price_data['volume'].tail(20).mean()
+                        
+                        # Section 1: Oracle Score & Pattern Detection
+                        st.markdown("### 🎯 Oracle Score & Pattern Detection")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            # Fetch float data
+                            float_analysis = oracle_float.analyze_float(ticker, current_volume, avg_volume)
+                            float_size = float_analysis.get('float_size', 0)
+                            
+                            # Fetch news
+                            news_analysis = oracle_news.scan_news(ticker, days_back=7)
+                            news_items = news_analysis.get('all_news', [])
+                            
+                            # Build market data dict
+                            market_data = {
+                                'float': float_size,
+                                'volume': current_volume,
+                                'avg_volume': avg_volume,
+                                'high': float(latest['high']),
+                                'low': float(latest['low']),
+                                'close': current_price,
+                                'news': news_items,
+                                'sector_momentum': 0.7,  # Placeholder - would need sector scan
+                                'risk_reward_ratio': 5.0  # Will be calculated
+                            }
+                            
+                            # Calculate Oracle Score
+                            oracle_score = oracle.calculate_oracle_score(ticker, market_data)
+                            
+                            # Display Oracle Score
+                            score = oracle_score.get('total_score', 0)
+                            grade = oracle_score.get('grade', 'N/A')
+                            confidence = oracle_score.get('confidence', 'UNKNOWN')
+                            
+                            if score >= 120:
+                                color = "#00c851"  # Green
+                                emoji = "🚀"
+                            elif score >= 100:
+                                color = "#4CAF50"
+                                emoji = "✅"
+                            elif score >= 75:
+                                color = "#FFA726"
+                                emoji = "🔥"
+                            elif score >= 60:
+                                color = "#FFEB3B"
+                                emoji = "🟡"
+                            else:
+                                color = "#F44336"
+                                emoji = "🔴"
+                            
+                            st.markdown(f"""
+                            <div style="background: {color}; padding: 1.5rem; border-radius: 10px; text-align: center;">
+                                <h1 style="color: white; margin: 0;">{emoji} {score}/165</h1>
+                                <h3 style="color: white; margin: 0.5rem 0;">{grade} Setup</h3>
+                                <p style="color: white; margin: 0;">{confidence}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        with col2:
+                            # Pattern Detection
+                            st.markdown("**🔍 Pattern Detection**")
+                            
+                            # Multi-day runner
+                            runner_pattern = oracle.detect_multiday_runner(
+                                ticker, price_data, float_size, news_items
+                            )
+                            
+                            if runner_pattern.get('detected'):
+                                st.success("✅ Multi-Day Runner Detected")
+                                st.caption(f"Confidence: {runner_pattern.get('confidence', 'N/A')}")
+                            else:
+                                st.info("⚪ No Multi-Day Runner Pattern")
+                            
+                            # Display criteria
+                            criteria = runner_pattern.get('criteria_met', {})
+                            for key, met in criteria.items():
+                                icon = "✅" if met else "❌"
+                                label = key.replace('_', ' ').title()
+                                st.caption(f"{icon} {label}")
+                        
+                        with col3:
+                            # Risk/Reward
+                            st.markdown("**🎯 Risk/Reward Analysis**")
+                            
+                            levels = runner_pattern.get('levels', {})
+                            entry = levels.get('entry', current_price)
+                            stop = levels.get('stop_loss', current_price * 0.95)
+                            target = levels.get('target', current_price * 1.10)
+                            rr_ratio = levels.get('reward', 0) / levels.get('risk', 1) if levels.get('risk', 0) > 0 else 0
+                            
+                            st.metric("Entry", f"${entry:.2f}")
+                            st.metric("Stop Loss", f"${stop:.2f}")
+                            st.metric("Target", f"${target:.2f}")
+                            
+                            if rr_ratio >= 5.0:
+                                st.success(f"✅ {rr_ratio:.1f}:1 R/R")
+                            elif rr_ratio >= 3.0:
+                                st.warning(f"🟡 {rr_ratio:.1f}:1 R/R")
+                            else:
+                                st.error(f"🔴 {rr_ratio:.1f}:1 R/R")
+                        
+                        st.markdown("---")
+                        
+                        # Section 2: Score Breakdown
+                        st.markdown("### 📊 Score Breakdown")
+                        
+                        breakdown = oracle_score.get('breakdown', {})
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.metric("Float Criteria", f"{breakdown.get('float', 0)}/25")
+                            st.metric("Volume Surge", f"{breakdown.get('volume_surge', 0)}/20")
+                        
+                        with col2:
+                            st.metric("News Catalyst", f"{breakdown.get('news_catalyst', 0)}/30")
+                            st.metric("Sector Momentum", f"{breakdown.get('sector_momentum', 0)}/15")
+                        
+                        with col3:
+                            st.metric("Chart Pattern", f"{breakdown.get('chart_pattern', 0)}/35")
+                            st.metric("Risk/Reward", f"{breakdown.get('risk_reward', 0)}/40")
+                        
+                        st.markdown("---")
+                        
+                        # Section 3: Float Analysis
+                        st.markdown("### 📦 Float Analysis")
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            float_size_m = float_analysis.get('float_size', 0) / 1_000_000
+                            st.metric("Float Size", f"{float_size_m:.1f}M")
+                            grade_info = float_analysis.get('float_grade', {})
+                            st.caption(f"{grade_info.get('grade', 'N/A')} - {grade_info.get('quality', 'N/A')}")
+                        
+                        with col2:
+                            rotation = float_analysis.get('float_rotation', 0)
+                            st.metric("Float Rotation", f"{rotation:.1f}%")
+                            rot_grade = float_analysis.get('rotation_grade', {})
+                            st.caption(f"{rot_grade.get('grade', 'N/A')} - {rot_grade.get('quality', 'N/A')}")
+                        
+                        with col3:
+                            inst = float_analysis.get('institutional_ownership', 0)
+                            st.metric("Institutional", f"{inst:.1f}%")
+                            inst_grade = float_analysis.get('institutional_grade', {})
+                            st.caption(f"{inst_grade.get('grade', 'N/A')} - {inst_grade.get('quality', 'N/A')}")
+                        
+                        with col4:
+                            expected_move = float_analysis.get('expected_move_percent', 0)
+                            st.metric("Expected Move", f"{expected_move:.1f}%")
+                            float_score = float_analysis.get('float_score', 0)
+                            st.caption(f"Float Score: {float_score}/100")
+                        
+                        st.info(float_analysis.get('analysis', 'No analysis available'))
+                        
+                        st.markdown("---")
+                        
+                        # Section 4: News Catalysts
+                        st.markdown("### 📢 News Catalysts")
+                        
+                        catalyst_score = news_analysis.get('catalyst_score', 0)
+                        catalyst_grade = news_analysis.get('grade', 'N/A')
+                        catalyst_quality = news_analysis.get('quality', 'UNKNOWN')
+                        
+                        col1, col2 = st.columns([1, 3])
+                        
+                        with col1:
+                            if catalyst_score >= 25:
+                                color = "#00c851"
+                            elif catalyst_score >= 15:
+                                color = "#FFA726"
+                            else:
+                                color = "#F44336"
+                            
+                            st.markdown(f"""
+                            <div style="background: {color}; padding: 1rem; border-radius: 10px; text-align: center;">
+                                <h2 style="color: white; margin: 0;">{catalyst_score}</h2>
+                                <p style="color: white; margin: 0.5rem 0;">{catalyst_grade}</p>
+                                <p style="color: white; margin: 0; font-size: 0.9rem;">{catalyst_quality}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        with col2:
+                            top_catalysts = news_analysis.get('top_catalysts', [])
+                            if top_catalysts:
+                                for catalyst in top_catalysts[:3]:
+                                    headline = catalyst.get('headline', 'N/A')
+                                    score = catalyst.get('total_score', 0)
+                                    sentiment = catalyst.get('sentiment', 'NEUTRAL')
+                                    
+                                    if sentiment == 'VERY_BULLISH':
+                                        icon = "🚀"
+                                    elif sentiment == 'BULLISH':
+                                        icon = "✅"
+                                    elif sentiment == 'SLIGHTLY_BULLISH':
+                                        icon = "🟢"
+                                    else:
+                                        icon = "⚪"
+                                    
+                                    st.markdown(f"**{icon} {headline}**")
+                                    st.caption(f"Score: {score} | {sentiment}")
+                                    st.markdown("---")
+                            else:
+                                st.info("⚠️ No recent news catalysts found")
+                        
+                        st.markdown("---")
+                        
+                        # Section 5: Support/Resistance Levels
+                        st.markdown("### 🎯 Support & Resistance Levels")
+                        
+                        levels_analysis = oracle_levels.calculate_oracle_levels(price_data)
+                        levels_dict = levels_analysis.get('levels', {})
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("**🔴 Resistance Levels**")
+                            
+                            strong_res = levels_dict.get('strong_resistance', [])
+                            if strong_res:
+                                for level in strong_res:
+                                    price = level.get('price', 0)
+                                    strength = level.get('strength', 0)
+                                    touches = level.get('touches', 0)
+                                    st.metric(
+                                        f"Strong R: ${price:.2f}",
+                                        f"{touches} touches",
+                                        f"Strength: {strength:.0f}"
+                                    )
+                            else:
+                                st.info("No strong resistance identified")
+                        
+                        with col2:
+                            st.markdown("**🟢 Support Levels**")
+                            
+                            support = levels_dict.get('support', [])
+                            if support:
+                                for level in support[:3]:
+                                    price = level.get('price', 0)
+                                    strength = level.get('strength', 0)
+                                    touches = level.get('touches', 0)
+                                    st.metric(
+                                        f"Support: ${price:.2f}",
+                                        f"{touches} touches",
+                                        f"Strength: {strength:.0f}"
+                                    )
+                            else:
+                                st.info("No support levels identified")
+                        
+                        # Position analysis
+                        position = levels_analysis.get('position', {})
+                        signal = position.get('signal', '⚪ NO DATA')
+                        st.info(f"📍 Current Position: {signal}")
+                        
+                        st.markdown("---")
+                        
+                        # Section 6: Position Sizing
+                        st.markdown("### 💰 Position Sizing Calculator")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            account_value = st.number_input(
+                                "Account Value ($)",
+                                min_value=1000.0,
+                                value=25000.0,
+                                step=1000.0
+                            )
+                            
+                            risk_percent = st.slider(
+                                "Risk Per Trade (%)",
+                                min_value=0.5,
+                                max_value=5.0,
+                                value=2.0,
+                                step=0.5
+                            ) / 100
+                        
+                        with col2:
+                            # Calculate position size
+                            position_calc = oracle.calculate_position_size(
+                                account_value,
+                                entry,
+                                stop,
+                                risk_percent
+                            )
+                            
+                            if 'error' not in position_calc:
+                                shares = position_calc.get('shares', 0)
+                                position_value = position_calc.get('position_value', 0)
+                                risk_amount = position_calc.get('risk_amount', 0)
+                                
+                                st.metric("Shares to Buy", f"{shares:,}")
+                                st.metric("Position Value", f"${position_value:,.2f}")
+                                st.metric("Risk Amount", f"${risk_amount:,.2f}")
+                                
+                                if position_value / account_value <= 0.25:
+                                    st.success("✅ Position size within limits (< 25%)")
+                                else:
+                                    st.warning("⚠️ Position exceeds 25% of account")
+                            else:
+                                st.error(position_calc.get('error', 'Calculation error'))
+                        
+                except Exception as e:
+                    st.error(f"❌ Error in Oracle analysis: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+            else:
+                st.warning("⚠️ Oracle Scanner modules not available")
 
 else:
     # Welcome screen
