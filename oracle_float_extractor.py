@@ -402,6 +402,137 @@ class OracleFloatExtractor:
             'symbol': symbol,
             'error': 'Unable to fetch float data from any source'
         }
+    
+    def analyze_float(self, ticker: str, current_volume: float, avg_volume: float) -> Dict:
+        """
+        Comprehensive float analysis compatible with dashboard.
+        
+        Args:
+            ticker: Stock symbol
+            current_volume: Today's volume
+            avg_volume: Average daily volume
+        
+        Returns:
+            Dict with complete float analysis including grades and scores
+        """
+        # Get raw float data
+        float_data = self.get_float_data(ticker)
+        
+        float_size = float_data.get('float', 0)
+        shares_outstanding = float_data.get('shares_outstanding', 0)
+        institutional_ownership = float_data.get('institutional_ownership', 0)
+        insider_ownership = float_data.get('insider_ownership', 0)
+        
+        # Calculate float rotation
+        if float_size > 0:
+            rotation = (current_volume / float_size) * 100
+        else:
+            rotation = 0.0
+        
+        # Calculate days to cover
+        if avg_volume > 0 and float_size > 0:
+            days_to_cover = float_size / avg_volume
+        else:
+            days_to_cover = 0.0
+        
+        # Calculate expected move
+        if rotation > 0:
+            expected_move = rotation * 0.5  # Simplified formula
+        else:
+            expected_move = 0.0
+        
+        # Grade float size
+        if float_size < 10_000_000:
+            float_grade = {'grade': 'A+', 'quality': 'EXCELLENT'}
+        elif float_size < 20_000_000:
+            float_grade = {'grade': 'A', 'quality': 'GOOD'}
+        elif float_size < 50_000_000:
+            float_grade = {'grade': 'B', 'quality': 'ACCEPTABLE'}
+        elif float_size < 100_000_000:
+            float_grade = {'grade': 'C', 'quality': 'MARGINAL'}
+        else:
+            float_grade = {'grade': 'F', 'quality': 'TOO_HIGH'}
+        
+        # Grade rotation
+        if rotation > 50:
+            rotation_grade = {'grade': 'A+', 'quality': 'EXPLOSIVE'}
+        elif rotation > 30:
+            rotation_grade = {'grade': 'A', 'quality': 'STRONG'}
+        elif rotation > 15:
+            rotation_grade = {'grade': 'B', 'quality': 'MODERATE'}
+        elif rotation > 5:
+            rotation_grade = {'grade': 'C', 'quality': 'WEAK'}
+        else:
+            rotation_grade = {'grade': 'F', 'quality': 'VERY_WEAK'}
+        
+        # Grade institutional ownership
+        if institutional_ownership < 20:
+            institutional_grade = {'grade': 'A+', 'quality': 'LOW'}
+        elif institutional_ownership < 40:
+            institutional_grade = {'grade': 'A', 'quality': 'MODERATE'}
+        elif institutional_ownership < 60:
+            institutional_grade = {'grade': 'B', 'quality': 'HIGH'}
+        else:
+            institutional_grade = {'grade': 'C', 'quality': 'VERY_HIGH'}
+        
+        # Calculate overall float score (0-100)
+        float_score = 0
+        
+        # Float size score (0-40 points)
+        if float_size < 10_000_000:
+            float_score += 40
+        elif float_size < 20_000_000:
+            float_score += 30
+        elif float_size < 50_000_000:
+            float_score += 20
+        elif float_size < 100_000_000:
+            float_score += 10
+        
+        # Rotation score (0-40 points)
+        if rotation > 50:
+            float_score += 40
+        elif rotation > 30:
+            float_score += 30
+        elif rotation > 15:
+            float_score += 20
+        elif rotation > 5:
+            float_score += 10
+        
+        # Institutional ownership score (0-20 points)
+        if institutional_ownership < 20:
+            float_score += 20
+        elif institutional_ownership < 40:
+            float_score += 15
+        elif institutional_ownership < 60:
+            float_score += 10
+        elif institutional_ownership < 80:
+            float_score += 5
+        
+        # Check if meets Tim Bohen's criteria
+        meets_criteria = (
+            float_size > 0 and
+            float_size < 20_000_000 and
+            rotation > 15 and
+            institutional_ownership < 60
+        )
+        
+        return {
+            'ticker': ticker,
+            'float_size': float_size,
+            'shares_outstanding': shares_outstanding,
+            'float_rotation': round(rotation, 2),
+            'days_to_cover': round(days_to_cover, 2),
+            'institutional_ownership': round(institutional_ownership, 2),
+            'insider_ownership': round(insider_ownership, 2),
+            'expected_move_percent': round(expected_move, 2),
+            'float_grade': float_grade,
+            'rotation_grade': rotation_grade,
+            'institutional_grade': institutional_grade,
+            'float_score': float_score,
+            'meets_bohen_criteria': meets_criteria,
+            'source': float_data.get('source', 'Unknown'),
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
 
 
 # Test function
@@ -418,3 +549,134 @@ if __name__ == "__main__":
     print(f"  Insider Ownership: {data['insider_ownership']:.2f}%")
     print(f"  Institutional Ownership: {data['institutional_ownership']:.2f}%")
     print(f"  Source: {data['source']}")
+
+    def analyze_float(self, ticker: str, current_volume: float, avg_volume: float) -> Dict:
+        """
+        Comprehensive float analysis compatible with dashboard.
+        
+        Args:
+            ticker: Stock symbol
+            current_volume: Today's volume
+            avg_volume: Average daily volume
+        
+        Returns:
+            Dict with complete float analysis including grades and scores
+        """
+        # Get raw float data
+        float_data = self.get_float_data(ticker)
+        
+        float_size = float_data.get('float', 0)
+        shares_outstanding = float_data.get('shares_outstanding', 0)
+        institutional_ownership = float_data.get('institutional_ownership', 0)
+        insider_ownership = float_data.get('insider_ownership', 0)
+        
+        # Calculate float rotation
+        if float_size > 0:
+            rotation = (current_volume / float_size) * 100
+        else:
+            rotation = 0.0
+        
+        # Calculate days to cover
+        if avg_volume > 0 and float_size > 0:
+            days_to_cover = float_size / avg_volume
+        else:
+            days_to_cover = 0.0
+        
+        # Calculate expected move
+        if rotation > 0:
+            expected_move = rotation * 0.5  # Simplified formula
+        else:
+            expected_move = 0.0
+        
+        # Grade float size
+        if float_size < 10_000_000:
+            float_grade = {'grade': 'A+', 'quality': 'EXCELLENT'}
+        elif float_size < 20_000_000:
+            float_grade = {'grade': 'A', 'quality': 'GOOD'}
+        elif float_size < 50_000_000:
+            float_grade = {'grade': 'B', 'quality': 'ACCEPTABLE'}
+        elif float_size < 100_000_000:
+            float_grade = {'grade': 'C', 'quality': 'MARGINAL'}
+        else:
+            float_grade = {'grade': 'F', 'quality': 'TOO_HIGH'}
+        
+        # Grade rotation
+        if rotation > 50:
+            rotation_grade = {'grade': 'A+', 'quality': 'EXPLOSIVE'}
+        elif rotation > 30:
+            rotation_grade = {'grade': 'A', 'quality': 'STRONG'}
+        elif rotation > 15:
+            rotation_grade = {'grade': 'B', 'quality': 'MODERATE'}
+        elif rotation > 5:
+            rotation_grade = {'grade': 'C', 'quality': 'WEAK'}
+        else:
+            rotation_grade = {'grade': 'F', 'quality': 'VERY_WEAK'}
+        
+        # Grade institutional ownership
+        if institutional_ownership < 20:
+            institutional_grade = {'grade': 'A+', 'quality': 'LOW'}
+        elif institutional_ownership < 40:
+            institutional_grade = {'grade': 'A', 'quality': 'MODERATE'}
+        elif institutional_ownership < 60:
+            institutional_grade = {'grade': 'B', 'quality': 'HIGH'}
+        else:
+            institutional_grade = {'grade': 'C', 'quality': 'VERY_HIGH'}
+        
+        # Calculate overall float score (0-100)
+        float_score = 0
+        
+        # Float size score (0-40 points)
+        if float_size < 10_000_000:
+            float_score += 40
+        elif float_size < 20_000_000:
+            float_score += 30
+        elif float_size < 50_000_000:
+            float_score += 20
+        elif float_size < 100_000_000:
+            float_score += 10
+        
+        # Rotation score (0-40 points)
+        if rotation > 50:
+            float_score += 40
+        elif rotation > 30:
+            float_score += 30
+        elif rotation > 15:
+            float_score += 20
+        elif rotation > 5:
+            float_score += 10
+        
+        # Institutional ownership score (0-20 points)
+        if institutional_ownership < 20:
+            float_score += 20
+        elif institutional_ownership < 40:
+            float_score += 15
+        elif institutional_ownership < 60:
+            float_score += 10
+        elif institutional_ownership < 80:
+            float_score += 5
+        
+        # Check if meets Tim Bohen's criteria
+        meets_criteria = (
+            float_size > 0 and
+            float_size < 20_000_000 and
+            rotation > 15 and
+            institutional_ownership < 60
+        )
+        
+        return {
+            'ticker': ticker,
+            'float_size': float_size,
+            'shares_outstanding': shares_outstanding,
+            'float_rotation': round(rotation, 2),
+            'days_to_cover': round(days_to_cover, 2),
+            'institutional_ownership': round(institutional_ownership, 2),
+            'insider_ownership': round(insider_ownership, 2),
+            'expected_move_percent': round(expected_move, 2),
+            'float_grade': float_grade,
+            'rotation_grade': rotation_grade,
+            'institutional_grade': institutional_grade,
+            'float_score': float_score,
+            'meets_bohen_criteria': meets_criteria,
+            'source': float_data.get('source', 'Unknown'),
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        }

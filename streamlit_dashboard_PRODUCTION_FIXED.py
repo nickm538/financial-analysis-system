@@ -1445,13 +1445,13 @@ if analyze_button and ticker:
                 from oracle_algorithm import OracleAlgorithm
                 from oracle_levels import OracleLevelsEnhanced as OracleLevels
                 from oracle_news import OracleNews
-                from oracle_float import OracleFloat
+                from oracle_float_extractor import OracleFloatExtractor
                 
                 # Initialize Oracle engines
                 oracle = OracleAlgorithm(alphavantage_client, None, td_client)
                 oracle_levels = OracleLevels()
                 oracle_news = OracleNews(FINNHUB_API_KEY)
-                oracle_float = OracleFloat(FINNHUB_API_KEY)
+                oracle_float = OracleFloatExtractor(finnhub_api_key=FINNHUB_API_KEY)
                 
                 ORACLE_AVAILABLE = True
             except Exception as e:
