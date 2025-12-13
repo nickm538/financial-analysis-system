@@ -1485,6 +1485,21 @@ if analyze_button and ticker:
                             news_analysis = oracle_news.scan_news(ticker, days_back=7)
                             news_items = news_analysis.get('all_news', [])
                             
+                            # Calculate risk/reward from actual levels
+                            try:
+                                levels_analysis = oracle_levels.calculate_oracle_levels(price_data)
+                                nearest_support = levels_analysis.get('nearest_support', current_price * 0.95)
+                                nearest_resistance = levels_analysis.get('nearest_resistance', current_price * 1.10)
+                                
+                                entry = current_price
+                                stop = nearest_support
+                                target = nearest_resistance
+                                risk = entry - stop
+                                reward = target - entry
+                                rr_ratio = reward / risk if risk > 0 else 0.0
+                            except:
+                                rr_ratio = 0.0
+                            
                             # Build market data dict
                             market_data = {
                                 'float': float_size,
@@ -1494,8 +1509,8 @@ if analyze_button and ticker:
                                 'low': float(latest['low']),
                                 'close': current_price,
                                 'news': news_items,
-                                'sector_momentum': 0.7,  # Placeholder - would need sector scan
-                                'risk_reward_ratio': 5.0  # Will be calculated
+                                'sector_momentum': 0.0,  # Not calculated (requires sector scan)
+                                'risk_reward_ratio': rr_ratio  # Calculated from support/resistance
                             }
                             
                             # Calculate Oracle Score

@@ -697,9 +697,17 @@ class ComprehensiveFundamentals:
             if any(x in key for x in ['ratio', 'beta', 'turnover', 'coverage', 'multiplier']):
                 formatted[key] = f"{val:.2f}" if val != 0 else "N/A"
             
-            # Percentages
-            elif any(x in key for x in ['margin', 'growth', 'roe', 'roa', 'yield']):
-                formatted[key] = f"{val:.2f}%" if val != 0 else "N/A"
+            # Percentages (multiply by 100 if stored as decimal)
+            elif any(x in key for x in ['margin', 'growth', 'roe', 'roa', 'roic', 'yield', 'ownership', 'insider', 'institutional']):
+                # Check if value is already in percentage form (>1) or decimal form (<1)
+                if 0 < val < 1:
+                    # Stored as decimal (e.g., 0.152), convert to percentage
+                    formatted[key] = f"{val*100:.2f}%"
+                elif val >= 1:
+                    # Already in percentage form (e.g., 15.2)
+                    formatted[key] = f"{val:.2f}%"
+                else:
+                    formatted[key] = "N/A"
             
             # Large currency values (Market Cap, EBITDA, Revenue, Cash Flow)
             elif any(x in key for x in ['cap', 'ebitda', 'revenue', 'cash_flow', 'enterprise_value']):
@@ -715,8 +723,17 @@ class ComprehensiveFundamentals:
                     formatted[key] = "N/A"
             
             # Per-share values
-            elif 'per_share' in key or key == 'eps' or 'projected_eps' in key:
+            elif 'per_share' in key or key == 'eps':
                 formatted[key] = f"${val:.2f}" if val != 0 else "N/A"
+            
+            # Projected EPS (growth rate, not dollar amount)
+            elif 'projected_eps' in key:
+                if 0 < val < 1:
+                    formatted[key] = f"{val*100:.2f}%"
+                elif val >= 1:
+                    formatted[key] = f"{val:.2f}%"
+                else:
+                    formatted[key] = "N/A"
             
             # Default
             else:
