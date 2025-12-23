@@ -463,14 +463,15 @@ if analyze_button and ticker:
         """, unsafe_allow_html=True)
 
         # Tabs
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "🎯 AI Summary",
             "📊 Comprehensive Fundamentals",
             "📈 Technical Analysis",
             "💡 AI Insights",
             "📋 Raw Data",
             "🔮 Oracle Scanner",
-            "📊 Options Pressure"
+            "📊 Options Pressure",
+            "🏊 Dark Pool"
         ])
 
         # Get all cached data with error handling
@@ -1899,6 +1900,39 @@ if analyze_button and ticker:
                     
                     st.markdown("---")
                     
+                    # Buy/Sell Classification
+                    st.markdown("### 🔄 Buy/Sell Flow Classification")
+                    st.caption(f"Method: {pressure_data.get('classification_method', 'N/A')} | Accuracy: {pressure_data.get('classification_accuracy', 'N/A')}")
+                    
+                    buy_pct = pressure_data.get('buy_pct', 50)
+                    sell_pct = pressure_data.get('sell_pct', 50)
+                    flow_sentiment = pressure_data.get('flow_sentiment', 'UNKNOWN')
+                    flow_color = pressure_data.get('flow_sentiment_color', '#9E9E9E')
+                    
+                    # Visual buy/sell bar
+                    st.markdown(f"""
+                    <div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; margin: 15px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                        <div style="width: {buy_pct}%; background: linear-gradient(135deg, #00c851, #4CAF50); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1em;">
+                            🟢 BUY {buy_pct:.1f}%
+                        </div>
+                        <div style="width: {sell_pct}%; background: linear-gradient(135deg, #F44336, #FF5722); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1em;">
+                            🔴 SELL {sell_pct:.1f}%
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("🟢 Buy Volume", f"{pressure_data.get('buy_volume', 0):,}")
+                    with col2:
+                        st.metric("🔴 Sell Volume", f"{pressure_data.get('sell_volume', 0):,}")
+                    with col3:
+                        st.metric("Buy/Sell Ratio", f"{pressure_data.get('buy_sell_ratio', 1.0):.2f}")
+                    with col4:
+                        st.metric("Flow Sentiment", flow_sentiment)
+                    
+                    st.markdown("---")
+                    
                     # Open Interest
                     st.markdown("### 📈 Open Interest")
                     
@@ -1979,6 +2013,169 @@ if analyze_button and ticker:
                 st.error(f"❌ Options Pressure module not available: {e}")
             except Exception as e:
                 st.error(f"❌ Error in Options Pressure analysis: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+
+        # ==================== TAB 8: DARK POOL ====================
+        with tab8:
+            st.markdown("### 🏊 Dark Pool Scanner")
+            st.markdown("*Off-exchange trading analysis and short volume data*")
+            
+            try:
+                from dark_pool_scanner import DarkPoolScanner, BuySellClassifier
+                
+                dp_scanner = DarkPoolScanner()
+                
+                with st.spinner(f"🏊 Analyzing dark pool activity for {ticker}..."):
+                    dp_data = dp_scanner.get_dark_pool_analysis(ticker)
+                
+                if dp_data['status'] == 'success':
+                    # Overall Score Display
+                    st.markdown("### 🎯 Dark Pool Sentiment Score")
+                    
+                    score = dp_data['overall_score']
+                    sentiment = dp_data['overall_sentiment']
+                    color = dp_data.get('overall_color', '#9E9E9E')
+                    
+                    # Visual score bar
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(90deg, #F44336 0%, #9E9E9E 50%, #00c851 100%); 
+                                border-radius: 10px; height: 30px; position: relative; margin: 20px 0;">
+                        <div style="position: absolute; left: {score}%; top: -5px; 
+                                    width: 20px; height: 40px; background: white; 
+                                    border-radius: 5px; border: 3px solid {color};
+                                    transform: translateX(-50%);">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                        <span>🐻 BEARISH</span>
+                        <span>NEUTRAL</span>
+                        <span>BULLISH 🐂</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Score", f"{score}/100")
+                    with col2:
+                        st.metric("Sentiment", sentiment)
+                    with col3:
+                        st.metric("Price", f"${dp_data.get('current_price', 0):.2f}")
+                    
+                    st.markdown("---")
+                    
+                    # Short Volume Analysis (FINRA)
+                    st.markdown("### 📉 Short Volume Analysis (FINRA)")
+                    
+                    if dp_data.get('has_short_data'):
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("Short Volume", f"{dp_data['short_volume']:,}")
+                        with col2:
+                            short_ratio = dp_data['short_ratio']
+                            delta_color = "inverse" if short_ratio > 50 else "normal"
+                            st.metric("Short Ratio", f"{short_ratio}%", delta=f"{short_ratio-50:.1f}% vs neutral", delta_color=delta_color)
+                        with col3:
+                            st.metric("Total Volume", f"{dp_data.get('short_total_volume', 0):,}")
+                        with col4:
+                            st.metric("Short Sentiment", dp_data['short_sentiment'])
+                        
+                        st.caption(f"📅 Data from: {dp_data.get('short_date', 'N/A')} | Source: FINRA")
+                    else:
+                        st.info("ℹ️ FINRA short volume data not available for this ticker")
+                    
+                    st.markdown("---")
+                    
+                    # Dark Pool Position (Stockgrid)
+                    st.markdown("### 🏊 Dark Pool Net Position")
+                    
+                    if dp_data.get('has_dark_pool_data'):
+                        col1, col2, col3 = st.columns(3)
+                        
+                        net_pos = dp_data['net_dp_position']
+                        net_pos_dollar = dp_data['net_dp_position_dollar']
+                        
+                        with col1:
+                            st.metric("Net Position", f"{net_pos:,.0f} shares")
+                        with col2:
+                            st.metric("Net Position $", f"${net_pos_dollar:,.0f}")
+                        with col3:
+                            st.metric("DP Sentiment", dp_data['dp_sentiment'])
+                        
+                        st.caption(f"📅 Data from: {dp_data.get('dp_date', 'N/A')} | Source: Stockgrid.io")
+                    else:
+                        st.info("ℹ️ Dark pool position data not available for this ticker")
+                    
+                    st.markdown("---")
+                    
+                    # Buy/Sell Estimation
+                    st.markdown("### 🔄 Buy/Sell Volume Estimation")
+                    
+                    classifier = BuySellClassifier()
+                    buy_sell = classifier.estimate_buy_sell_ratio(
+                        volume=dp_data.get('today_volume', 0),
+                        price_change_pct=dp_data.get('price_change_pct', 0),
+                        short_ratio=dp_data.get('short_ratio', 50)
+                    )
+                    
+                    # Visual buy/sell bar
+                    buy_pct = buy_sell['buy_pct']
+                    st.markdown(f"""
+                    <div style="display: flex; height: 40px; border-radius: 5px; overflow: hidden; margin: 10px 0;">
+                        <div style="width: {buy_pct}%; background: #00c851; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                            BUY {buy_pct:.1f}%
+                        </div>
+                        <div style="width: {100-buy_pct}%; background: #F44336; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                            SELL {100-buy_pct:.1f}%
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Est. Buy Volume", f"{buy_sell['buy_volume']:,}")
+                    with col2:
+                        st.metric("Est. Sell Volume", f"{buy_sell['sell_volume']:,}")
+                    with col3:
+                        net = buy_sell['net_volume']
+                        st.metric("Net Volume", f"{net:+,}")
+                    
+                    st.caption(f"⚠️ Estimation based on price movement and short ratio | Confidence: {buy_sell['confidence']}")
+                    
+                    st.markdown("---")
+                    
+                    # Signals
+                    st.markdown("### 📡 Dark Pool Signals")
+                    
+                    for signal in dp_data['signals']:
+                        st.markdown(f"- {signal}")
+                    
+                    st.markdown("---")
+                    
+                    # Top Dark Pool Activity
+                    st.markdown("### 🔝 Top Dark Pool Activity (Market-Wide)")
+                    
+                    top_stocks = dp_scanner.get_top_dark_pool_activity(10)
+                    
+                    if top_stocks:
+                        for i, stock in enumerate(top_stocks, 1):
+                            emoji = '🟢' if stock['sentiment'] == 'BULLISH' else '🔴' if stock['sentiment'] == 'BEARISH' else '⚪'
+                            st.markdown(f"{i}. **{stock['ticker']}**: {stock['net_position']:,.0f} shares ({emoji} {stock['sentiment']}) | Short: {stock.get('short_volume_pct', 0)*100:.1f}%")
+                    else:
+                        st.info("Unable to fetch market-wide dark pool data")
+                    
+                    # Data disclaimer
+                    st.markdown("---")
+                    st.caption(f"⏱️ Data is end-of-day (not real-time) | Sources: FINRA, Stockgrid.io | Last updated: {dp_data['timestamp'][:19]}")
+                    
+                else:
+                    st.error(f"❌ Error: {dp_data.get('error', 'Unknown error')}")
+                    
+            except ImportError as e:
+                st.error(f"❌ Dark Pool Scanner module not available: {e}")
+            except Exception as e:
+                st.error(f"❌ Error in Dark Pool analysis: {e}")
                 import traceback
                 st.code(traceback.format_exc())
 
