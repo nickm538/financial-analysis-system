@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # API Keys
 MASSIVE_API_KEY = "KYqKTuCIZ7MQWBp_5hZDxRlKBQVcLXMt"
-FINNHUB_API_KEY = "d47ssnpr01qk80bicu4gd47ssnpr01qk80bicu50"
+FINNHUB_API_KEY = "d55b3ohr01qljfdeghm0d55b3ohr01qljfdeghmg"
 TWELVEDATA_API_KEY = "5e7a5daaf41d46a8966963106ebef210"
 
 # Import FIXED comprehensive fundamentals
