@@ -463,13 +463,14 @@ if analyze_button and ticker:
         """, unsafe_allow_html=True)
 
         # Tabs
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
             "🎯 AI Summary",
             "📊 Comprehensive Fundamentals",
             "📈 Technical Analysis",
             "💡 AI Insights",
             "📋 Raw Data",
-            "🔮 Oracle Scanner"
+            "🔮 Oracle Scanner",
+            "📊 Options Pressure"
         ])
 
         # Get all cached data with error handling
@@ -1802,6 +1803,184 @@ if analyze_button and ticker:
                     st.code(traceback.format_exc())
             else:
                 st.warning("⚠️ Oracle Scanner modules not available")
+
+        # ===== TAB 7: OPTIONS PRESSURE =====
+        with tab7:
+            st.markdown("""
+            <div class="ai-insight">
+                <h2>📊 Options Pressure Indicator</h2>
+                <p>🐂 Bullish vs 🐻 Bearish Flow | Put/Call Ratio | Unusual Activity Detection</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            try:
+                from options_pressure import OptionsPressure
+                
+                options_pressure = OptionsPressure()
+                
+                with st.spinner("📊 Analyzing options flow..."):
+                    pressure_data = options_pressure.get_pressure_analysis(ticker)
+                
+                if pressure_data['status'] == 'success':
+                    # Main Pressure Bar
+                    st.markdown("### 🎯 Options Pressure Bar")
+                    
+                    # Visual Pressure Bar
+                    pressure_bar = pressure_data['pressure_bar']
+                    net_pressure = pressure_data['net_pressure']
+                    sentiment = pressure_data['sentiment']
+                    sentiment_color = pressure_data['sentiment_color']
+                    
+                    # Custom HTML pressure bar
+                    st.markdown(f"""
+                    <div style="background: #1a1a2e; padding: 20px; border-radius: 15px; margin: 10px 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: #F44336; font-weight: bold; font-size: 1.1em;">🐻 BEARISH</span>
+                            <span style="color: {sentiment_color}; font-weight: bold; font-size: 1.3em;">{sentiment}</span>
+                            <span style="color: #00c851; font-weight: bold; font-size: 1.1em;">BULLISH 🐂</span>
+                        </div>
+                        
+                        <div style="background: #2d2d2d; border-radius: 10px; height: 50px; position: relative; overflow: hidden;">
+                            <!-- Center line -->
+                            <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #fff; z-index: 2;"></div>
+                            
+                            <!-- Pressure fill -->
+                            <div style="
+                                position: absolute;
+                                left: {min(pressure_bar, 50)}%;
+                                width: {abs(pressure_bar - 50)}%;
+                                height: 100%;
+                                background: linear-gradient(90deg, {'#F44336' if net_pressure < 0 else '#2d2d2d'}, {sentiment_color});
+                                border-radius: 5px;
+                                transition: all 0.5s ease;
+                            "></div>
+                            
+                            <!-- Pressure indicator ball -->
+                            <div style="
+                                position: absolute;
+                                left: {pressure_bar}%;
+                                top: 50%;
+                                transform: translate(-50%, -50%);
+                                width: 30px;
+                                height: 30px;
+                                background: {sentiment_color};
+                                border-radius: 50%;
+                                border: 4px solid white;
+                                z-index: 3;
+                                box-shadow: 0 0 15px {sentiment_color};
+                            "></div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; margin-top: 10px; color: #888;">
+                            <span>0</span>
+                            <span style="color: {sentiment_color}; font-weight: bold; font-size: 1.2em;">Net Pressure: {net_pressure:+.1f}%</span>
+                            <span>100</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.markdown("---")
+                    
+                    # Volume Metrics
+                    st.markdown("### 📊 Volume Analysis")
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("📈 Call Volume", f"{pressure_data['call_volume']:,}")
+                    with col2:
+                        st.metric("📉 Put Volume", f"{pressure_data['put_volume']:,}")
+                    with col3:
+                        st.metric("📊 Total Volume", f"{pressure_data['total_volume']:,}")
+                    with col4:
+                        pcr = pressure_data['pcr_volume']
+                        pcr_color = "inverse" if pcr > 1 else "normal"
+                        st.metric("Put/Call Ratio", f"{pcr:.2f}", delta="Bearish" if pcr > 1 else "Bullish", delta_color=pcr_color)
+                    
+                    st.markdown("---")
+                    
+                    # Open Interest
+                    st.markdown("### 📈 Open Interest")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Call OI", f"{pressure_data['call_oi']:,}")
+                    with col2:
+                        st.metric("Put OI", f"{pressure_data['put_oi']:,}")
+                    with col3:
+                        st.metric("OI Put/Call", f"{pressure_data['pcr_oi']:.2f}")
+                    
+                    st.markdown("---")
+                    
+                    # Unusual Activity
+                    st.markdown("### 🚨 Unusual Activity Detection")
+                    
+                    if pressure_data['has_unusual_activity']:
+                        st.success("✅ Unusual options activity detected!")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("**🟢 Unusual CALLS:**")
+                            if pressure_data['unusual_calls']:
+                                for item in pressure_data['unusual_calls'][:3]:
+                                    st.markdown(f"""
+                                    - **Strike ${item['strike']}**: {item['volume']:,} vol ({item['vol_oi_ratio']}x OI)
+                                      IV: {item['implied_volatility']}%
+                                    """)
+                            else:
+                                st.info("No unusual call activity")
+                        
+                        with col2:
+                            st.markdown("**🔴 Unusual PUTS:**")
+                            if pressure_data['unusual_puts']:
+                                for item in pressure_data['unusual_puts'][:3]:
+                                    st.markdown(f"""
+                                    - **Strike ${item['strike']}**: {item['volume']:,} vol ({item['vol_oi_ratio']}x OI)
+                                      IV: {item['implied_volatility']}%
+                                    """)
+                            else:
+                                st.info("No unusual put activity")
+                    else:
+                        st.info("ℹ️ No unusual activity detected (Volume < 2x Open Interest)")
+                    
+                    st.markdown("---")
+                    
+                    # Top Active Strikes
+                    st.markdown("### 🎯 Most Active Strikes")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**🟢 Top Call Strikes:**")
+                        if pressure_data['top_call_strikes']:
+                            for i, strike in enumerate(pressure_data['top_call_strikes'][:5], 1):
+                                st.markdown(f"{i}. **${strike['strike']}** - Vol: {strike['volume']:,} | OI: {strike['open_interest']:,}")
+                        else:
+                            st.info("No call data")
+                    
+                    with col2:
+                        st.markdown("**🔴 Top Put Strikes:**")
+                        if pressure_data['top_put_strikes']:
+                            for i, strike in enumerate(pressure_data['top_put_strikes'][:5], 1):
+                                st.markdown(f"{i}. **${strike['strike']}** - Vol: {strike['volume']:,} | OI: {strike['open_interest']:,}")
+                        else:
+                            st.info("No put data")
+                    
+                    # Data disclaimer
+                    st.markdown("---")
+                    st.caption(f"⏱️ Data: {pressure_data['data_delay']} | Last updated: {pressure_data['timestamp'][:19]}")
+                    
+                else:
+                    st.error(f"❌ Error fetching options data: {pressure_data.get('error', 'Unknown error')}")
+                    
+            except ImportError as e:
+                st.error(f"❌ Options Pressure module not available: {e}")
+            except Exception as e:
+                st.error(f"❌ Error in Options Pressure analysis: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 
 else:
     # Welcome screen
