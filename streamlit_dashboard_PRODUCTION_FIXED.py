@@ -463,7 +463,8 @@ if analyze_button and ticker:
         """, unsafe_allow_html=True)
 
         # Tabs
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+        tab0, tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+            "🏆 MASTER SCORE",
             "🎯 AI Summary",
             "📊 Comprehensive Fundamentals",
             "📈 Technical Analysis",
@@ -552,6 +553,209 @@ if analyze_button and ticker:
             fund_score = momentum_score = trend_score = volume_score = pattern_score = {'score': 0, 'signal': 'N/A', 'details': []}
             tech_score = {'score': 0, 'signal': 'N/A'}
             composite_score = {'score': 0, 'signal': 'N/A', 'grade': 'N/A', 'confidence': 'N/A', 'recommendation': 'Scoring unavailable'}
+
+        # ========== TAB 0: MASTER SCORE ==========
+        with tab0:
+            st.markdown("### 🏆 MASTER COMPOSITE SCORE")
+            st.markdown("*AI-powered multi-factor analysis combining all data sources*")
+            
+            try:
+                from composite_score import CompositeScoreEngine
+                from options_pressure import OptionsPressure
+                from dark_pool_scanner import DarkPoolScanner
+                
+                with st.spinner("🧠 Calculating Master Score from all data sources..."):
+                    # Gather all data
+                    engine = CompositeScoreEngine()
+                    
+                    # Options data
+                    try:
+                        op = OptionsPressure()
+                        options_data = op.get_pressure_analysis(ticker)
+                    except:
+                        options_data = None
+                    
+                    # Dark pool data
+                    try:
+                        dp = DarkPoolScanner()
+                        dark_pool_data = dp.get_dark_pool_analysis(ticker)
+                    except:
+                        dark_pool_data = None
+                    
+                    # Technical data (from existing technicals)
+                    technical_data = None
+                    if technicals:
+                        technical_data = {
+                            'rsi': technicals.get('rsi'),
+                            'macd': technicals.get('macd'),
+                            'macd_signal': technicals.get('macd_signal'),
+                            'stoch_k': technicals.get('stoch_k'),
+                            'adx': technicals.get('adx'),
+                            'sma_20': technicals.get('sma_20'),
+                            'current_price': technicals.get('current_price')
+                        }
+                    
+                    # Fundamental data (from existing fundamentals)
+                    fundamental_data = None
+                    if fundamentals:
+                        formatted = fundamentals.get('formatted', {})
+                        fundamental_data = {
+                            'pe_ratio': fundamentals.get('metrics', {}).get('pe_ratio'),
+                            'revenue_growth': fundamentals.get('metrics', {}).get('revenue_growth'),
+                            'net_margin': fundamentals.get('metrics', {}).get('net_margin'),
+                            'roe': fundamentals.get('metrics', {}).get('roe'),
+                            'debt_to_equity': fundamentals.get('metrics', {}).get('debt_to_equity')
+                        }
+                    
+                    # Price data
+                    price_data = None
+                    if technicals:
+                        price_data = {
+                            'price_change_pct': technicals.get('price_change_pct', 0),
+                            'volume_ratio': technicals.get('volume_ratio', 1.0)
+                        }
+                    
+                    # Calculate Master Score
+                    master_result = engine.calculate_master_score(
+                        options_data=options_data,
+                        dark_pool_data=dark_pool_data,
+                        technical_data=technical_data,
+                        fundamental_data=fundamental_data,
+                        price_data=price_data
+                    )
+                
+                if master_result.get('status') == 'success':
+                    # Giant Master Score Display
+                    score = master_result['master_score']
+                    signal = master_result['signal']
+                    signal_color = master_result['signal_color']
+                    confidence = master_result['confidence']
+                    
+                    st.markdown(f"""
+                    <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; margin: 20px 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                        <div style="font-size: 80px; font-weight: bold; color: {signal_color}; text-shadow: 0 0 30px {signal_color};">
+                            {score}
+                        </div>
+                        <div style="font-size: 16px; color: #888; margin-top: -10px;">out of 100</div>
+                        <div style="font-size: 36px; font-weight: bold; color: {signal_color}; margin-top: 20px;">
+                            {signal}
+                        </div>
+                        <div style="font-size: 14px; color: #888; margin-top: 10px;">
+                            Confidence: {confidence} | Strength: {master_result['signal_strength']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.markdown("---")
+                    
+                    # Category Score Breakdown
+                    st.markdown("### 📊 Category Score Breakdown")
+                    
+                    cols = st.columns(5)
+                    categories = master_result['category_scores']
+                    
+                    cat_names = ['options_flow', 'dark_pool', 'technical', 'fundamental', 'momentum']
+                    cat_icons = ['📊', '🏊', '📈', '💰', '🚀']
+                    cat_labels = ['Options Flow', 'Dark Pool', 'Technical', 'Fundamental', 'Momentum']
+                    
+                    for i, (cat_name, icon, label) in enumerate(zip(cat_names, cat_icons, cat_labels)):
+                        with cols[i]:
+                            cat_data = categories[cat_name]
+                            cat_score = cat_data['score']
+                            available = cat_data['available']
+                            
+                            if available:
+                                if cat_score >= 60:
+                                    color = '#00c851'
+                                elif cat_score >= 40:
+                                    color = '#9E9E9E'
+                                else:
+                                    color = '#F44336'
+                                
+                                st.markdown(f"""
+                                <div style="text-align: center; padding: 15px; background: #1a1a2e; border-radius: 10px; border: 2px solid {color};">
+                                    <div style="font-size: 24px;">{icon}</div>
+                                    <div style="font-size: 28px; font-weight: bold; color: {color};">{cat_score}</div>
+                                    <div style="font-size: 12px; color: #888;">{label}</div>
+                                    <div style="font-size: 10px; color: #666;">Weight: {cat_data['weight']*100:.0f}%</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.markdown(f"""
+                                <div style="text-align: center; padding: 15px; background: #1a1a2e; border-radius: 10px; border: 2px solid #444; opacity: 0.5;">
+                                    <div style="font-size: 24px;">{icon}</div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #666;">N/A</div>
+                                    <div style="font-size: 12px; color: #888;">{label}</div>
+                                    <div style="font-size: 10px; color: #666;">No data</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                    
+                    st.markdown("---")
+                    
+                    # AI Analysis
+                    st.markdown("### 🧠 AI Analysis")
+                    st.markdown(f"""
+                    <div style="padding: 20px; background: #1a1a2e; border-radius: 10px; border-left: 4px solid {signal_color};">
+                        <p style="font-size: 16px; color: #ddd; margin: 0;">{master_result['analysis']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.markdown("---")
+                    
+                    # Key Drivers
+                    st.markdown("### 🔑 Key Drivers")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    bullish_drivers = [d for d in master_result['key_drivers'] if d['sentiment'] == 'BULLISH']
+                    bearish_drivers = [d for d in master_result['key_drivers'] if d['sentiment'] == 'BEARISH']
+                    
+                    with col1:
+                        st.markdown("**🟢 Bullish Factors:**")
+                        if bullish_drivers:
+                            for driver in bullish_drivers[:5]:
+                                st.markdown(f"- **{driver['factor']}**: {driver['value']} ({driver['impact']})")
+                        else:
+                            st.info("No strong bullish factors")
+                    
+                    with col2:
+                        st.markdown("**🔴 Bearish Factors:**")
+                        if bearish_drivers:
+                            for driver in bearish_drivers[:5]:
+                                st.markdown(f"- **{driver['factor']}**: {driver['value']} ({driver['impact']})")
+                        else:
+                            st.info("No strong bearish factors")
+                    
+                    st.markdown("---")
+                    
+                    # Risk Assessment
+                    st.markdown("### ⚠️ Risk Assessment")
+                    
+                    risk = master_result['risk_assessment']
+                    risk_color = '#00c851' if risk['level'] == 'LOW' else '#FF9800' if risk['level'] == 'MEDIUM' else '#F44336'
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Risk Level", risk['level'])
+                    with col2:
+                        st.metric("Indicator Divergence", f"{risk.get('divergence', 0):.1f}")
+                    
+                    for factor in risk['factors']:
+                        st.markdown(f"- {factor}")
+                    
+                    # Data completeness
+                    st.markdown("---")
+                    st.caption(f"📊 Data Completeness: {master_result['data_completeness']} | Confidence: {master_result['confidence_pct']}% | Last updated: {master_result['timestamp'][:19]}")
+                    
+                else:
+                    st.error(f"❌ Error calculating Master Score: {master_result.get('error', 'Unknown error')}")
+                    
+            except ImportError as e:
+                st.error(f"❌ Composite Score module not available: {e}")
+            except Exception as e:
+                st.error(f"❌ Error in Master Score calculation: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 
         # ========== TAB 1: AI SUMMARY ==========
         with tab1:
