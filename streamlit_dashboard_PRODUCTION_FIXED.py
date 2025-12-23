@@ -583,36 +583,39 @@ if analyze_button and ticker:
                         dark_pool_data = None
                     
                     # Technical data (from existing technicals)
+                    # Note: technicals has nested structure with 'indicators' key
                     technical_data = None
-                    if technicals:
+                    if technicals and technicals.get('indicators'):
+                        inds = technicals['indicators']
                         technical_data = {
-                            'rsi': technicals.get('rsi'),
-                            'macd': technicals.get('macd'),
-                            'macd_signal': technicals.get('macd_signal'),
-                            'stoch_k': technicals.get('stoch_k'),
-                            'adx': technicals.get('adx'),
-                            'sma_20': technicals.get('sma_20'),
-                            'current_price': technicals.get('current_price')
+                            'rsi': inds.get('rsi', {}).get('value') if isinstance(inds.get('rsi'), dict) else inds.get('rsi'),
+                            'macd': inds.get('macd', {}).get('value') if isinstance(inds.get('macd'), dict) else inds.get('macd'),
+                            'macd_signal': inds.get('macd_signal', {}).get('value') if isinstance(inds.get('macd_signal'), dict) else inds.get('macd_signal'),
+                            'stoch_k': inds.get('stoch_k', {}).get('value') if isinstance(inds.get('stoch_k'), dict) else inds.get('stoch_k'),
+                            'adx': inds.get('adx', {}).get('value') if isinstance(inds.get('adx'), dict) else inds.get('adx'),
+                            'sma_20': inds.get('sma_20', {}).get('value') if isinstance(inds.get('sma_20'), dict) else inds.get('sma_20'),
+                            'current_price': inds.get('current_price')
                         }
                     
                     # Fundamental data (from existing fundamentals)
+                    # Note: fundamentals is a flat dict returned by get_fundamentals(), not nested
                     fundamental_data = None
                     if fundamentals:
-                        formatted = fundamentals.get('formatted', {})
                         fundamental_data = {
-                            'pe_ratio': fundamentals.get('metrics', {}).get('pe_ratio'),
-                            'revenue_growth': fundamentals.get('metrics', {}).get('revenue_growth'),
-                            'net_margin': fundamentals.get('metrics', {}).get('net_margin'),
-                            'roe': fundamentals.get('metrics', {}).get('roe'),
-                            'debt_to_equity': fundamentals.get('metrics', {}).get('debt_to_equity')
+                            'pe_ratio': fundamentals.get('pe_ratio'),
+                            'revenue_growth': fundamentals.get('revenue_growth'),
+                            'net_margin': fundamentals.get('net_margin'),
+                            'roe': fundamentals.get('roe'),
+                            'debt_to_equity': fundamentals.get('debt_to_equity')
                         }
                     
                     # Price data
                     price_data = None
-                    if technicals:
+                    if technicals and technicals.get('indicators'):
+                        inds = technicals['indicators']
                         price_data = {
-                            'price_change_pct': technicals.get('price_change_pct', 0),
-                            'volume_ratio': technicals.get('volume_ratio', 1.0)
+                            'price_change_pct': inds.get('price_change_pct', 0),
+                            'volume_ratio': inds.get('volume_ratio', 1.0)
                         }
                     
                     # Calculate Master Score
