@@ -100,24 +100,22 @@ class OptionsPressure:
         Returns:
             Dict with all pressure metrics
         """
-        # Volume metrics
-        call_volume = calls['volume'].sum() if 'volume' in calls.columns else 0
-        put_volume = puts['volume'].sum() if 'volume' in puts.columns else 0
+        # Volume metrics - fillna(0) BEFORE sum to handle NaN contracts
+        call_volume = calls['volume'].fillna(0).sum() if 'volume' in calls.columns else 0
+        put_volume = puts['volume'].fillna(0).sum() if 'volume' in puts.columns else 0
+        
+        # Ensure numeric types (handle any remaining edge cases)
+        call_volume = float(call_volume) if not pd.isna(call_volume) else 0.0
+        put_volume = float(put_volume) if not pd.isna(put_volume) else 0.0
         total_volume = call_volume + put_volume
         
-        # Handle NaN values
-        call_volume = 0 if pd.isna(call_volume) else call_volume
-        put_volume = 0 if pd.isna(put_volume) else put_volume
-        total_volume = call_volume + put_volume
+        # Open Interest metrics - fillna(0) BEFORE sum
+        call_oi = calls['openInterest'].fillna(0).sum() if 'openInterest' in calls.columns else 0
+        put_oi = puts['openInterest'].fillna(0).sum() if 'openInterest' in puts.columns else 0
         
-        # Open Interest metrics
-        call_oi = calls['openInterest'].sum() if 'openInterest' in calls.columns else 0
-        put_oi = puts['openInterest'].sum() if 'openInterest' in puts.columns else 0
-        total_oi = call_oi + put_oi
-        
-        # Handle NaN values
-        call_oi = 0 if pd.isna(call_oi) else call_oi
-        put_oi = 0 if pd.isna(put_oi) else put_oi
+        # Ensure numeric types
+        call_oi = float(call_oi) if not pd.isna(call_oi) else 0.0
+        put_oi = float(put_oi) if not pd.isna(put_oi) else 0.0
         total_oi = call_oi + put_oi
         
         # Put/Call Ratio (Volume-based)
