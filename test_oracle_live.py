@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 # API Keys (hardcoded for testing)
 TWELVEDATA_API_KEY = "5e7a5daaf41d46a8966963106ebef210"
-FINNHUB_API_KEY = "ctq2n49r01qmb1p5oe9gctq2n49r01qmb1p5oea0"  # User's key
+FINNHUB_API_KEY = "d55b3ohr01qljfdeghm0d55b3ohr01qljfdeghmg"  # User's key
 
 def test_float_extraction(ticker: str):
     """Test float data extraction from multiple sources"""

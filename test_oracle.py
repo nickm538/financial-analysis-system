@@ -51,7 +51,7 @@ print()
 print("Testing Oracle Float Analysis...")
 print("-" * 60)
 
-FINNHUB_API_KEY = "d47ssnpr01qk80bicu4gd47ssnpr01qk80bicu50"
+FINNHUB_API_KEY = "d55b3ohr01qljfdeghm0d55b3ohr01qljfdeghmg"
 oracle_float = OracleFloat(FINNHUB_API_KEY)
 
 # Test with AAPL

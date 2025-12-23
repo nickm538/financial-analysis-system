@@ -17,7 +17,7 @@ import time
 FMP_API_KEY = "qy7DU7wlhqMWYSOykfm3I1Y8vYEZlCQz"
 FMP_BASE_URL = "https://financialmodelingprep.com/stable"
 
-FINNHUB_API_KEY = "d47ssnpr01qk80bicu4gd47ssnpr01qk80bicu50"
+FINNHUB_API_KEY = "d55b3ohr01qljfdeghm0d55b3ohr01qljfdeghmg"
 FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
 
 class StockDataClient:
