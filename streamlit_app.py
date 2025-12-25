@@ -655,9 +655,15 @@ if analyze_button and ticker:
 
                 with col1:
                     pe = fundamentals.get('pe_ratio', 0)
+                    eps = fundamentals.get('eps', 0)
                     pe_interp = interpret_pe_ratio(pe)
                     st.metric("P/E Ratio", formatted.get('pe_ratio', 'N/A'), help="Price-to-Earnings")
-                    st.caption(f"{pe_interp[0]}: {pe_interp[2]}")
+                    if pe > 0:
+                        st.caption(f"{pe_interp[0]}: {pe_interp[2]}")
+                    elif eps < 0:
+                        st.caption("⚠️ N/A: Company has negative earnings")
+                    else:
+                        st.caption("ℹ️ N/A: Earnings data unavailable")
 
                 with col2:
                     forward_pe = fundamentals.get('forward_pe', 0)
@@ -668,8 +674,10 @@ if analyze_button and ticker:
                         st.caption("📊 Fair")
                     elif forward_pe > 0:
                         st.caption("⚠️ Expensive")
+                    elif eps < 0:
+                        st.caption("⚠️ N/A: Company has negative earnings")
                     else:
-                        st.caption("N/A")
+                        st.caption("ℹ️ N/A: Forward earnings estimate unavailable")
 
                 with col3:
                     peg = fundamentals.get('peg_ratio', 0)
@@ -680,8 +688,10 @@ if analyze_button and ticker:
                         st.caption("📊 Fair growth value")
                     elif peg > 0:
                         st.caption("⚠️ Overvalued growth")
+                    elif pe <= 0:
+                        st.caption("⚠️ N/A: Requires positive P/E ratio")
                     else:
-                        st.caption("N/A")
+                        st.caption("ℹ️ N/A: Growth rate data unavailable")
 
                 with col4:
                     ps = fundamentals.get('ps_ratio', 0)
@@ -707,6 +717,7 @@ if analyze_button and ticker:
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     ev_ebitda = fundamentals.get('ev_ebitda', 0)
+                    ebitda_val = fundamentals.get('ebitda', 0)
                     st.metric("EV/EBITDA", formatted.get('ev_ebitda', 'N/A'), help="Enterprise Value to EBITDA")
                     if 0 < ev_ebitda < 10:
                         st.caption("✅ Undervalued")
@@ -714,16 +725,20 @@ if analyze_button and ticker:
                         st.caption("📊 Fair value")
                     elif ev_ebitda > 0:
                         st.caption("⚠️ Expensive")
+                    elif ebitda_val <= 0:
+                        st.caption("⚠️ N/A: EBITDA is negative or zero")
                     else:
-                        st.caption("N/A")
+                        st.caption("ℹ️ N/A: Enterprise value data unavailable")
                 
                 with col2:
                     ebitda = fundamentals.get('ebitda', 0)
                     st.metric("EBITDA", formatted.get('ebitda', 'N/A'), help="Earnings Before Interest, Taxes, Depreciation, Amortization")
                     if ebitda > 0:
                         st.caption("✅ Positive EBITDA")
+                    elif ebitda < 0:
+                        st.caption("⚠️ Negative EBITDA (company is losing money)")
                     else:
-                        st.caption("⚠️ Negative EBITDA")
+                        st.caption("ℹ️ N/A: EBITDA data unavailable")
                 
                 with col3:
                     revenue = fundamentals.get('revenue', 0)
