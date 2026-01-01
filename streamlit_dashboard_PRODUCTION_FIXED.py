@@ -415,6 +415,11 @@ with st.sidebar:
 
     st.markdown("---")
     analyze_button = st.button("🔍 Analyze Stock", type="primary", use_container_width=True)
+    
+    # Store analyze state in session
+    if analyze_button and ticker:
+        st.session_state['analyzed_ticker'] = ticker
+        st.session_state['show_analysis'] = True
 
     st.markdown("---")
     st.markdown("### 💡 Features")
@@ -428,8 +433,64 @@ with st.sidebar:
     - ✅ Production-Ready
     """)
 
-# Main content
-if analyze_button and ticker:
+# ===== STANDALONE MARKET SCANNER (Works without analyzing a stock) =====
+st.markdown("---")
+with st.expander("🚀 **QUICK ACCESS: Full Market 5:1 Scanner** (Click to expand)", expanded=False):
+    st.markdown("""
+    ### 🔍 Scan Entire Market for 5:1 Setups
+    Find stocks meeting Tim Bohen's criteria without analyzing a specific stock first.
+    """)
+    
+    scanner_col1, scanner_col2 = st.columns([1, 2])
+    
+    with scanner_col1:
+        if st.button("🚀 SCAN NOW", key="quick_market_scan_btn", type="primary", help="Scans 500+ stocks for 5:1 setups"):
+            try:
+                from oracle_market_scanner import OracleMarketScanner
+                scanner = OracleMarketScanner(finnhub_api_key=FINNHUB_API_KEY)
+                
+                with st.spinner("🔍 Scanning market for 5:1 setups... This takes 1-2 minutes..."):
+                    scan_results = scanner.quick_scan()
+                    st.session_state['quick_scan_results'] = scan_results
+            except Exception as e:
+                st.error(f"Scanner error: {e}")
+    
+    # Display quick scan results
+    if 'quick_scan_results' in st.session_state and st.session_state['quick_scan_results']:
+        results = st.session_state['quick_scan_results']
+        
+        st.success(f"✅ Found {results['five_to_one_count']} stocks with 5:1 setups!")
+        
+        if results['five_to_one_setups']:
+            st.markdown("#### 🎯 Top 5:1 Reward-Risk Setups:")
+            
+            import pandas as pd
+            df_data = []
+            for setup in results['five_to_one_setups'][:10]:
+                df_data.append({
+                    'Ticker': setup['ticker'],
+                    'Price': f"${setup['price']:.2f}",
+                    'Score': f"{setup['total_score']}/{setup['max_score']}",
+                    'Grade': setup['grade'],
+                    'Stop': f"${setup['stop_loss']:.2f}",
+                    'Target': f"${setup['target']:.2f}",
+                    'R:R': f"{setup['reward_risk_ratio']:.1f}:1"
+                })
+            
+            df = pd.DataFrame(df_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            st.info("💡 Click on any ticker above, enter it in the sidebar, and click 'Analyze Stock' for full analysis.")
+        else:
+            st.info("No 5:1 setups found. Try again during market hours.")
+
+st.markdown("---")
+
+# Main content - Show analysis if button clicked OR if we have a stored analysis
+show_analysis = (analyze_button and ticker) or (st.session_state.get('show_analysis', False) and st.session_state.get('analyzed_ticker'))
+if show_analysis:
+    # Use stored ticker if available
+    ticker = st.session_state.get('analyzed_ticker', ticker) if not (analyze_button and ticker) else ticker
     with st.spinner(f"🔍 Analyzing {ticker} with cached data (avoiding rate limits)..."):
 
         # Get cached price data
