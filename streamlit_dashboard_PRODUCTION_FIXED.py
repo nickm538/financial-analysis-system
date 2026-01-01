@@ -1670,17 +1670,85 @@ if analyze_button and ticker:
                 from oracle_levels import OracleLevelsEnhanced as OracleLevels
                 from oracle_news import OracleNews
                 from oracle_float_extractor import OracleFloatExtractor
+                from oracle_market_scanner import OracleMarketScanner
+                from ttm_squeeze import TTMSqueeze
                 
                 # Initialize Oracle engines
                 oracle = OracleAlgorithm(alphavantage_client, None, td_client)
                 oracle_levels = OracleLevels()
                 oracle_news = OracleNews(FINNHUB_API_KEY)
                 oracle_float = OracleFloatExtractor(finnhub_api_key=FINNHUB_API_KEY)
+                market_scanner = OracleMarketScanner(finnhub_api_key=FINNHUB_API_KEY)
+                ttm_squeeze = TTMSqueeze(TWELVEDATA_API_KEY)
                 
                 ORACLE_AVAILABLE = True
             except Exception as e:
                 st.error(f"❌ Error loading Oracle modules: {e}")
                 ORACLE_AVAILABLE = False
+            
+            # ===== MARKET SCANNER SECTION =====
+            st.markdown("### 🔍 Full Market 5:1 Scanner")
+            st.markdown("Scan the entire market for stocks meeting Tim Bohen's 5:1 reward-risk criteria.")
+            
+            scan_col1, scan_col2 = st.columns([1, 3])
+            
+            with scan_col1:
+                if st.button("🚀 SCAN MARKET FOR 5:1 SETUPS", key="market_scan_btn", help="Scans 500+ stocks for 5:1 reward-risk setups"):
+                    with st.spinner("🔍 Scanning market... This may take 1-2 minutes..."):
+                        try:
+                            scan_results = market_scanner.quick_scan()
+                            st.session_state['market_scan_results'] = scan_results
+                        except Exception as e:
+                            st.error(f"Scan error: {e}")
+            
+            # Display scan results if available
+            if 'market_scan_results' in st.session_state and st.session_state['market_scan_results']:
+                results = st.session_state['market_scan_results']
+                
+                st.success(f"✅ Found {results['five_to_one_count']} stocks with 5:1 setups!")
+                
+                if results['five_to_one_setups']:
+                    st.markdown("#### 🎯 5:1 Reward-Risk Setups Found:")
+                    
+                    # Create DataFrame for display
+                    import pandas as pd
+                    df_data = []
+                    for setup in results['five_to_one_setups'][:15]:
+                        df_data.append({
+                            'Ticker': setup['ticker'],
+                            'Price': f"${setup['price']:.2f}",
+                            'Score': f"{setup['total_score']}/{setup['max_score']}",
+                            'Grade': setup['grade'],
+                            'Float': f"{setup['float_shares']/1e6:.1f}M" if setup['float_shares'] else 'N/A',
+                            'Vol Ratio': f"{setup['volume_ratio']:.2f}x",
+                            'Stop': f"${setup['stop_loss']:.2f}",
+                            'Target': f"${setup['target']:.2f}",
+                            'R:R': f"{setup['reward_risk_ratio']:.1f}:1"
+                        })
+                    
+                    df = pd.DataFrame(df_data)
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    
+                    # Detailed view for top 3
+                    st.markdown("#### 📊 Top 3 Detailed Analysis:")
+                    for i, setup in enumerate(results['five_to_one_setups'][:3]):
+                        with st.expander(f"{i+1}. {setup['ticker']} - Score {setup['total_score']}/{setup['max_score']} (Grade {setup['grade']})"):
+                            col_a, col_b, col_c = st.columns(3)
+                            with col_a:
+                                st.metric("Entry", f"${setup['price']:.2f}")
+                                st.metric("Stop Loss", f"${setup['stop_loss']:.2f}")
+                            with col_b:
+                                st.metric("Target", f"${setup['target']:.2f}")
+                                st.metric("Risk", f"${setup['risk']:.2f}")
+                            with col_c:
+                                st.metric("Reward", f"${setup['reward']:.2f}")
+                                st.metric("R:R Ratio", f"{setup['reward_risk_ratio']:.1f}:1")
+                            
+                            st.markdown(f"**Sector:** {setup.get('sector', 'N/A')} | **Industry:** {setup.get('industry', 'N/A')}")
+                else:
+                    st.info("No 5:1 setups found in current scan. Try again during market hours.")
+            
+            st.markdown("---")
             
             if ORACLE_AVAILABLE:
                 # Get price data for Oracle analysis
@@ -1694,6 +1762,55 @@ if analyze_button and ticker:
                         current_price = float(latest['close'])
                         current_volume = float(latest['volume'])
                         avg_volume = price_data['volume'].tail(20).mean()
+                        
+                        # ===== TTM SQUEEZE SECTION =====
+                        st.markdown("### 💥 TTM Squeeze Indicator")
+                        
+                        try:
+                            squeeze_data = ttm_squeeze.calculate_squeeze(ticker, '1day')
+                            
+                            if squeeze_data['status'] == 'success':
+                                sq_col1, sq_col2, sq_col3, sq_col4 = st.columns(4)
+                                
+                                with sq_col1:
+                                    squeeze_status = "🔴 SQUEEZE ON" if squeeze_data['squeeze_on'] else "🟢 SQUEEZE OFF"
+                                    squeeze_color = "#ff4444" if squeeze_data['squeeze_on'] else "#00c851"
+                                    st.markdown(f"""
+                                    <div style="background: linear-gradient(135deg, {squeeze_color}22, {squeeze_color}44); 
+                                                border-radius: 10px; padding: 15px; text-align: center;">
+                                        <h3 style="color: {squeeze_color}; margin: 0;">{squeeze_status}</h3>
+                                        <p style="margin: 5px 0 0 0;">{squeeze_data['squeeze_count']} bars</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                with sq_col2:
+                                    momentum = squeeze_data.get('momentum', 0)
+                                    mom_color = "#00c851" if momentum and momentum > 0 else "#ff4444"
+                                    st.metric("Momentum", f"{momentum:.4f}" if momentum else "N/A")
+                                    st.caption(f"Color: {squeeze_data.get('momentum_color', 'N/A')}")
+                                
+                                with sq_col3:
+                                    st.metric("Signal", squeeze_data.get('signal', 'N/A'))
+                                    st.caption(f"Strength: {squeeze_data.get('signal_strength', 'N/A')}")
+                                
+                                with sq_col4:
+                                    st.metric("BB Width", f"{squeeze_data.get('bb_width', 0):.2f}%")
+                                    st.metric("ATR", f"${squeeze_data.get('atr', 0):.2f}")
+                                
+                                # Squeeze interpretation
+                                if squeeze_data['squeeze_on']:
+                                    st.info("🔴 **Squeeze ON** - Volatility is contracting. A breakout may be imminent. Watch for momentum direction when squeeze fires.")
+                                else:
+                                    if squeeze_data.get('momentum', 0) > 0:
+                                        st.success("🟢 **Squeeze OFF + Bullish Momentum** - Volatility expanding with upward momentum. Potential long opportunity.")
+                                    else:
+                                        st.warning("🟢 **Squeeze OFF + Bearish Momentum** - Volatility expanding with downward momentum. Potential short or avoid.")
+                            else:
+                                st.warning(f"TTM Squeeze calculation failed: {squeeze_data.get('error', 'Unknown error')}")
+                        except Exception as e:
+                            st.warning(f"TTM Squeeze unavailable: {e}")
+                        
+                        st.markdown("---")
                         
                         # Section 1: Oracle Score & Pattern Detection
                         st.markdown("### 🎯 Oracle Score & Pattern Detection")
