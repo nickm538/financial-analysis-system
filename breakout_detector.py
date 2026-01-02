@@ -50,9 +50,11 @@ class BreakoutDetector:
     - Final score normalized to 0-100 scale
     """
     
-    def __init__(self, twelvedata_api_key: str, finnhub_api_key: str = None):
-        self.td_api_key = twelvedata_api_key
-        self.finnhub_api_key = finnhub_api_key
+    def __init__(self, twelvedata_api_key: str = None, finnhub_api_key: str = None):
+        import os
+        # Use provided key or fall back to environment variable
+        self.td_api_key = twelvedata_api_key or os.environ.get('TWELVEDATA_API_KEY', 'd2e5e6e2c1c74e77b0c4e0e8e9e0e1e2')
+        self.finnhub_api_key = finnhub_api_key or os.environ.get('FINNHUB_API_KEY')
         self.base_url = "https://api.twelvedata.com"
         
     def _fetch_price_data(self, symbol: str, interval: str = "1day", outputsize: int = 100) -> Optional[pd.DataFrame]:
@@ -115,13 +117,15 @@ class BreakoutDetector:
         
         latest_range = df["range"].iloc[-1]
         
-        # NR4 Detection
+        # NR4 Detection - Use tolerance for float comparison (0.1% tolerance)
         last_4_ranges = df["range"].tail(4)
-        nr4 = latest_range == last_4_ranges.min()
+        min_4 = last_4_ranges.min()
+        nr4 = np.isclose(latest_range, min_4, rtol=0.001) or latest_range < min_4
         
-        # NR7 Detection
+        # NR7 Detection - Use tolerance for float comparison
         last_7_ranges = df["range"].tail(7)
-        nr7 = latest_range == last_7_ranges.min()
+        min_7 = last_7_ranges.min()
+        nr7 = np.isclose(latest_range, min_7, rtol=0.001) or latest_range < min_7
         
         # Calculate range percentile (how tight is this range historically?)
         all_ranges = df["range"].tail(50)
@@ -223,9 +227,15 @@ class BreakoutDetector:
         price_slope = np.polyfit(range(len(recent)), recent["close"].values, 1)[0]
         obv_slope = np.polyfit(range(len(recent)), recent["obv"].values, 1)[0]
         
-        # Normalize slopes for comparison
+        # Normalize slopes for comparison - use standard deviation for robust scaling
         price_slope_norm = price_slope / recent["close"].mean() * 100
-        obv_slope_norm = obv_slope / (abs(recent["obv"].mean()) + 1) * 100
+        
+        # OBV normalization: use range-based scaling to avoid division issues
+        obv_range = recent["obv"].max() - recent["obv"].min()
+        if obv_range > 0:
+            obv_slope_norm = obv_slope / obv_range * 100 * len(recent)  # Scale by lookback period
+        else:
+            obv_slope_norm = 0  # No OBV movement
         
         # Detect divergence
         divergence = "NONE"
@@ -676,12 +686,20 @@ class BreakoutDetector:
         
         df = df.copy()
         
-        # Calculate RSI
+        # Calculate RSI with proper handling of edge cases
         delta = df["close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
+        
+        # Handle division by zero: when loss is 0, RSI = 100 (all gains)
+        # When gain is 0, RSI = 0 (all losses)
+        # Add small epsilon to avoid division by zero
+        epsilon = 1e-10
+        rs = gain / (loss + epsilon)
         df["rsi"] = 100 - (100 / (1 + rs))
+        
+        # Handle NaN values (can occur at start of series)
+        df["rsi"] = df["rsi"].fillna(50)  # Default to neutral
         
         current_rsi = df["rsi"].iloc[-1]
         
@@ -761,14 +779,23 @@ class BreakoutDetector:
             0
         )
         
-        # Smooth with Wilder's method
+        # Smooth with Wilder's method - add epsilon to avoid division by zero
+        epsilon = 1e-10
         df["atr"] = df["tr"].ewm(alpha=1/period, adjust=False).mean()
-        df["plus_di"] = 100 * (df["plus_dm"].ewm(alpha=1/period, adjust=False).mean() / df["atr"])
-        df["minus_di"] = 100 * (df["minus_dm"].ewm(alpha=1/period, adjust=False).mean() / df["atr"])
+        df["plus_di"] = 100 * (df["plus_dm"].ewm(alpha=1/period, adjust=False).mean() / (df["atr"] + epsilon))
+        df["minus_di"] = 100 * (df["minus_dm"].ewm(alpha=1/period, adjust=False).mean() / (df["atr"] + epsilon))
         
-        # Calculate DX and ADX
-        df["dx"] = 100 * abs(df["plus_di"] - df["minus_di"]) / (df["plus_di"] + df["minus_di"])
+        # Calculate DX and ADX - handle division by zero when both DI are 0
+        di_sum = df["plus_di"] + df["minus_di"]
+        df["dx"] = np.where(di_sum > epsilon, 
+                            100 * abs(df["plus_di"] - df["minus_di"]) / di_sum,
+                            0)  # No trend when both DI are 0
         df["adx"] = df["dx"].ewm(alpha=1/period, adjust=False).mean()
+        
+        # Handle any remaining NaN values
+        df["adx"] = df["adx"].fillna(0)
+        df["plus_di"] = df["plus_di"].fillna(0)
+        df["minus_di"] = df["minus_di"].fillna(0)
         
         current_adx = df["adx"].iloc[-1]
         plus_di = df["plus_di"].iloc[-1]
@@ -964,27 +991,43 @@ class BreakoutDetector:
             synergies.append("🚀 TREND CONFIRMATION (+15)")
         
         # =====================================================================
-        # FINAL SCORE CALCULATION
+        # FINAL SCORE CALCULATION - Improved granularity
         # =====================================================================
-        raw_score = base_score + synergy_bonus
         
-        # Quality multiplier based on signal strength
+        # Cap base score at 100 (theoretical max is ~115 from all signals)
+        base_score_capped = min(100, base_score)
+        
+        # Synergy bonus adds on top, but capped at 30 points
+        synergy_bonus_capped = min(30, synergy_bonus)
+        
+        # Quality multiplier based on signal strength (applied to base only)
         quality_factors = []
         if nr_patterns["signal_strength"] == "VERY_STRONG":
-            quality_factors.append(1.1)
+            quality_factors.append(1.08)
         if obv_divergence["divergence_strength"] > 70:
-            quality_factors.append(1.1)
+            quality_factors.append(1.08)
         if ttm_squeeze["momentum_increasing"]:
-            quality_factors.append(1.05)
+            quality_factors.append(1.04)
         if volume["institutional_activity"] == "HIGH":
-            quality_factors.append(1.1)
+            quality_factors.append(1.08)
         
         quality_multiplier = 1.0
         for qf in quality_factors:
             quality_multiplier *= qf
-        quality_multiplier = min(1.3, quality_multiplier)  # Cap at 1.3x
+        quality_multiplier = min(1.25, quality_multiplier)  # Cap at 1.25x
         
-        final_score = min(100, int(raw_score * quality_multiplier))
+        # Apply quality multiplier to base score, then add synergy bonus
+        # This preserves granularity at high scores
+        adjusted_base = base_score_capped * quality_multiplier
+        raw_score = adjusted_base + synergy_bonus_capped
+        
+        # Final score: scale to 0-100 with proper distribution
+        # Max possible: 100 * 1.25 + 30 = 155, scale down
+        final_score = min(100, int(raw_score * 0.75))  # Scale factor to keep 100 as rare
+        
+        # Ensure minimum score of 5 if any signal is present
+        if len(signals) > 0 and final_score < 5:
+            final_score = 5
         
         # =====================================================================
         # DETERMINE PROBABILITY AND RECOMMENDATION
@@ -1026,11 +1069,19 @@ class BreakoutDetector:
         elif patterns["bias"] == "BEARISH":
             bearish_weight += 2
         
-        # S/R testing (weight: 1)
+        # S/R testing (weight: 1) - Consider price position relative to level
+        # Testing resistance from below = bullish (trying to break out)
+        # Testing support from above = could be bullish (bounce) or bearish (breakdown)
+        # Use momentum to determine support test direction
         if sr_testing["testing"] == "RESISTANCE":
-            bullish_weight += 1
+            bullish_weight += 1  # Testing resistance is bullish intent
         elif sr_testing["testing"] == "SUPPORT":
-            bearish_weight += 1
+            # If momentum is positive, likely a bounce (bullish)
+            # If momentum is negative, likely a breakdown (bearish)
+            if ttm_squeeze["momentum"] > 0:
+                bullish_weight += 1  # Support bounce
+            else:
+                bearish_weight += 1  # Support breakdown risk
         
         # RSI divergence (weight: 2)
         if rsi["divergence"] == "BULLISH":
