@@ -526,9 +526,17 @@ class BreakoutDetector:
         # Relative volume
         relative_volume = (current_volume / avg_volume_20) * 100 if avg_volume_20 > 0 else 100
         
-        # Volume trend (is it contracting?)
+        # Volume trend (is it contracting?) - Use percentile-based adaptive threshold
         volume_slope = np.polyfit(range(10), df["volume"].tail(10).values, 1)[0]
-        volume_contracting = volume_slope < 0 and avg_volume_5 < avg_volume_20 * 0.8
+        
+        # Calculate volume percentile for adaptive threshold
+        # Low volatility stocks need tighter threshold, high volatility need looser
+        volume_std = df["volume"].tail(20).std()
+        volume_cv = volume_std / avg_volume_20 if avg_volume_20 > 0 else 0  # Coefficient of variation
+        
+        # Adaptive threshold: 0.7 for low CV stocks, 0.85 for high CV stocks
+        adaptive_threshold = 0.7 + min(0.15, volume_cv * 0.5)
+        volume_contracting = volume_slope < 0 and avg_volume_5 < avg_volume_20 * adaptive_threshold
         
         # Volume pattern classification
         if relative_volume > 200:
@@ -594,6 +602,20 @@ class BreakoutDetector:
         df = df.copy()
         recent = df.tail(15)
         
+        # Calculate ATR for adaptive thresholds (accounts for stock volatility)
+        tr = np.maximum(
+            recent["high"] - recent["low"],
+            np.maximum(
+                abs(recent["high"] - recent["close"].shift(1)),
+                abs(recent["low"] - recent["close"].shift(1))
+            )
+        )
+        atr = tr.mean()
+        avg_price = recent["close"].mean()
+        
+        # ATR as percentage of price - used to scale thresholds
+        atr_pct = (atr / avg_price) * 100 if avg_price > 0 else 1
+        
         # Calculate trend lines
         highs = recent["high"].values
         lows = recent["low"].values
@@ -603,36 +625,41 @@ class BreakoutDetector:
         high_slope, high_intercept = np.polyfit(x, highs, 1)
         low_slope, low_intercept = np.polyfit(x, lows, 1)
         
-        # Normalize slopes
-        avg_price = recent["close"].mean()
+        # Normalize slopes by price
         high_slope_pct = (high_slope / avg_price) * 100
         low_slope_pct = (low_slope / avg_price) * 100
         
-        # Pattern detection
+        # Adaptive thresholds based on ATR
+        # Higher volatility stocks need larger slope to be significant
+        flat_threshold = max(0.15, min(0.5, atr_pct * 0.3))  # Range: 0.15 to 0.5
+        trend_threshold = max(0.2, min(0.6, atr_pct * 0.4))  # Range: 0.2 to 0.6
+        flag_threshold = max(0.3, min(0.8, atr_pct * 0.5))   # Range: 0.3 to 0.8
+        
+        # Pattern detection with adaptive thresholds
         pattern = "NONE"
         bias = "NEUTRAL"
         pattern_quality = 0
         
         # Ascending Triangle: flat highs, rising lows
-        if abs(high_slope_pct) < 0.3 and low_slope_pct > 0.3:
+        if abs(high_slope_pct) < flat_threshold and low_slope_pct > trend_threshold:
             pattern = "ASCENDING_TRIANGLE"
             bias = "BULLISH"
-            pattern_quality = min(100, (low_slope_pct / 0.3) * 50)
+            pattern_quality = min(100, (low_slope_pct / trend_threshold) * 50)
         
         # Descending Triangle: falling highs, flat lows
-        elif high_slope_pct < -0.3 and abs(low_slope_pct) < 0.3:
+        elif high_slope_pct < -trend_threshold and abs(low_slope_pct) < flat_threshold:
             pattern = "DESCENDING_TRIANGLE"
             bias = "BEARISH"
-            pattern_quality = min(100, (abs(high_slope_pct) / 0.3) * 50)
+            pattern_quality = min(100, (abs(high_slope_pct) / trend_threshold) * 50)
         
         # Symmetrical Triangle: converging
-        elif high_slope_pct < -0.2 and low_slope_pct > 0.2:
+        elif high_slope_pct < -flat_threshold and low_slope_pct > flat_threshold:
             pattern = "SYMMETRICAL_TRIANGLE"
             bias = "NEUTRAL"
-            pattern_quality = min(100, ((abs(high_slope_pct) + low_slope_pct) / 0.4) * 50)
+            pattern_quality = min(100, ((abs(high_slope_pct) + low_slope_pct) / (flat_threshold * 2)) * 50)
         
         # Bull Flag: slight downward drift after uptrend
-        elif high_slope_pct < 0 and high_slope_pct > -0.5 and low_slope_pct < 0 and low_slope_pct > -0.5:
+        elif high_slope_pct < 0 and high_slope_pct > -flag_threshold and low_slope_pct < 0 and low_slope_pct > -flag_threshold:
             # Check for prior uptrend
             prior = df.tail(30).head(15)
             prior_trend = (prior["close"].iloc[-1] - prior["close"].iloc[0]) / prior["close"].iloc[0] * 100
@@ -642,7 +669,7 @@ class BreakoutDetector:
                 pattern_quality = min(100, prior_trend * 10)
         
         # Bear Flag: slight upward drift after downtrend
-        elif high_slope_pct > 0 and high_slope_pct < 0.5 and low_slope_pct > 0 and low_slope_pct < 0.5:
+        elif high_slope_pct > 0 and high_slope_pct < flag_threshold and low_slope_pct > 0 and low_slope_pct < flag_threshold:
             prior = df.tail(30).head(15)
             prior_trend = (prior["close"].iloc[-1] - prior["close"].iloc[0]) / prior["close"].iloc[0] * 100
             if prior_trend < -5:
