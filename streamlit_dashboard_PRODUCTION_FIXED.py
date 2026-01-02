@@ -492,6 +492,143 @@ with st.expander("🚀 **QUICK ACCESS: Full Market 5:1 Scanner** (Click to expan
         else:
             st.info("No 5:1 setups found. Try again during market hours.")
 
+# ===== STANDALONE BREAKOUT SCANNER (Works without analyzing a stock) =====
+with st.expander("💥 **QUICK ACCESS: Breakout Detector Scanner** (Click to expand)", expanded=False):
+    st.markdown("""
+    ### 🔍 Scan Market for Breakout Setups
+    Find stocks with high-probability breakout signals (NR4/NR7, TTM Squeeze, OBV Divergence, etc.)
+    """)
+    
+    breakout_col1, breakout_col2 = st.columns([1, 2])
+    
+    with breakout_col1:
+        if st.button("💥 SCAN BREAKOUTS", key="quick_breakout_scan_btn", type="primary", help="Scans 24 popular stocks for breakout setups"):
+            try:
+                from breakout_detector import BreakoutDetector
+                bd = BreakoutDetector(TWELVEDATA_API_KEY, FINNHUB_API_KEY)
+                
+                with st.spinner("🔍 Scanning for breakout setups... This takes 1-2 minutes (rate limited)..."):
+                    breakout_scan_results = bd.quick_scan(top_n=15)
+                    st.session_state['quick_breakout_results'] = breakout_scan_results
+            except Exception as e:
+                st.error(f"Breakout Scanner error: {e}")
+    
+    # Display breakout scan results
+    if 'quick_breakout_results' in st.session_state and st.session_state['quick_breakout_results']:
+        bo_results = st.session_state['quick_breakout_results']
+        
+        if bo_results['status'] == 'success':
+            st.success(f"✅ {bo_results['scan_summary']}")
+            
+            # Very High Probability Setups
+            if bo_results['very_high_probability']:
+                st.markdown("#### 🚀 VERY HIGH Probability Breakouts:")
+                vh_data = []
+                for setup in bo_results['very_high_probability']:
+                    vh_data.append({
+                        'Ticker': setup['symbol'],
+                        'Price': f"${setup['price']:.2f}",
+                        'Score': f"{setup['score']}/{setup['max_score']}",
+                        'Direction': setup['direction'],
+                        'Signals': setup['signal_count'],
+                        'Squeeze': '🔴 ON' if setup['squeeze_on'] else ('🔥 FIRED' if setup['squeeze_fired'] else '🟢 OFF'),
+                        'NR Pattern': '✅' if setup['nr_pattern'] else '❌'
+                    })
+                st.dataframe(pd.DataFrame(vh_data), use_container_width=True, hide_index=True)
+            
+            # High Probability Setups
+            if bo_results['high_probability']:
+                st.markdown("#### 📈 HIGH Probability Breakouts:")
+                h_data = []
+                for setup in bo_results['high_probability'][:5]:
+                    h_data.append({
+                        'Ticker': setup['symbol'],
+                        'Price': f"${setup['price']:.2f}",
+                        'Score': f"{setup['score']}/{setup['max_score']}",
+                        'Direction': setup['direction'],
+                        'Signals': setup['signal_count'],
+                        'Squeeze': '🔴 ON' if setup['squeeze_on'] else ('🔥 FIRED' if setup['squeeze_fired'] else '🟢 OFF')
+                    })
+                st.dataframe(pd.DataFrame(h_data), use_container_width=True, hide_index=True)
+            
+            # Moderate Probability
+            if bo_results['moderate_probability'] and not bo_results['very_high_probability'] and not bo_results['high_probability']:
+                st.markdown("#### 📊 Moderate Probability (Developing):")
+                m_data = []
+                for setup in bo_results['moderate_probability'][:5]:
+                    m_data.append({
+                        'Ticker': setup['symbol'],
+                        'Price': f"${setup['price']:.2f}",
+                        'Score': f"{setup['score']}/{setup['max_score']}",
+                        'Direction': setup['direction']
+                    })
+                st.dataframe(pd.DataFrame(m_data), use_container_width=True, hide_index=True)
+            
+            if not bo_results['all_results']:
+                st.info("No breakout setups found meeting minimum criteria. Try again during market hours.")
+            else:
+                st.info("💡 Enter any ticker in the sidebar and click 'Analyze Stock' for full breakout analysis.")
+        else:
+            st.error(f"Scan failed: {bo_results.get('error', 'Unknown error')}")
+
+st.markdown("---")
+
+# ===== MACRO CONTEXT QUICK VIEW =====
+with st.expander("🌍 **QUICK ACCESS: Market Macro Context** (Click to expand)", expanded=False):
+    st.markdown("""
+    ### 📊 Current Market Conditions
+    VIX, sector rotation, market breadth - factors that affect ALL trades.
+    """)
+    
+    if st.button("🌍 GET MACRO CONTEXT", key="quick_macro_btn", type="primary", help="Analyzes current market conditions"):
+        try:
+            from macro_context import MacroContext
+            macro = MacroContext(FINNHUB_API_KEY)
+            
+            with st.spinner("📊 Analyzing macro conditions..."):
+                macro_data = macro.get_full_macro_context()
+                st.session_state['quick_macro_results'] = macro_data
+        except Exception as e:
+            st.error(f"Macro analysis error: {e}")
+    
+    # Display macro results
+    if 'quick_macro_results' in st.session_state and st.session_state['quick_macro_results']:
+        macro_data = st.session_state['quick_macro_results']
+        
+        # Overall Risk
+        risk_color = "🟢" if macro_data['overall_risk'] == "LOW" else ("🟡" if macro_data['overall_risk'] == "MODERATE" else "🔴")
+        st.markdown(f"### {risk_color} Overall Market Risk: **{macro_data['overall_risk']}**")
+        st.info(macro_data['risk_warning'])
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # VIX
+            if macro_data['vix']['status'] == 'success':
+                st.markdown("#### 📊 VIX (Fear Gauge)")
+                st.metric("Current VIX", f"{macro_data['vix']['current_vix']:.2f}", 
+                         f"{macro_data['vix']['change']:+.2f}")
+                st.caption(macro_data['vix']['interpretation'])
+        
+        with col2:
+            # Market Breadth
+            if macro_data['breadth']['status'] == 'success':
+                st.markdown("#### 📈 Market Breadth")
+                st.metric("SPY", f"{macro_data['breadth']['spy_return']:+.2f}%")
+                st.metric("QQQ", f"{macro_data['breadth']['qqq_return']:+.2f}%")
+                st.metric("IWM", f"{macro_data['breadth']['iwm_return']:+.2f}%")
+                st.caption(macro_data['breadth']['interpretation'])
+        
+        # Sector Rotation
+        if macro_data['sector_rotation']['status'] == 'success':
+            st.markdown("#### 🔄 Sector Rotation")
+            st.info(macro_data['sector_rotation']['interpretation'])
+            
+            leader_cols = st.columns(3)
+            for i, leader in enumerate(macro_data['sector_rotation']['leaders'][:3]):
+                with leader_cols[i]:
+                    st.metric(f"#{i+1} {leader['name']}", f"{leader['daily_return']:+.2f}%")
+
 st.markdown("---")
 
 # Main content - Show analysis if button clicked OR if we have a stored analysis

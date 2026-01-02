@@ -752,6 +752,117 @@ class BreakoutDetector:
             "nearest_resistance": sr_testing["nearest_resistance"],
             "nearest_support": sr_testing["nearest_support"]
         }
+    
+    # =========================================================================
+    # MARKET SCAN - Scan Multiple Stocks for Breakout Setups
+    # =========================================================================
+    def scan_market(self, symbols: List[str] = None, min_score: int = 40) -> Dict:
+        """
+        Scan multiple stocks for breakout setups.
+        
+        Args:
+            symbols: List of symbols to scan. If None, uses default watchlist.
+            min_score: Minimum breakout score to include in results.
+            
+        Returns:
+            Dict with scan results sorted by breakout score.
+        """
+        if symbols is None:
+            # Default watchlist - popular stocks with good liquidity
+            symbols = [
+                # Tech
+                "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "AMD", "TSLA",
+                # Finance
+                "JPM", "BAC", "GS", "MS", "V", "MA",
+                # Healthcare
+                "JNJ", "PFE", "UNH", "ABBV", "MRK",
+                # Consumer
+                "WMT", "HD", "NKE", "SBUX", "MCD",
+                # Energy
+                "XOM", "CVX", "COP", "SLB",
+                # Industrial
+                "CAT", "BA", "GE", "UPS",
+                # Popular momentum stocks
+                "PLTR", "SOFI", "RIVN", "LCID", "NIO", "COIN", "HOOD",
+                # ETFs
+                "SPY", "QQQ", "IWM", "XLF", "XLE", "XLK"
+            ]
+        
+        results = []
+        errors = []
+        
+        for symbol in symbols:
+            try:
+                # Rate limit - TwelveData free tier is 8 req/min
+                time.sleep(0.5)  # Small delay to avoid rate limits
+                
+                analysis = self.analyze_breakout(symbol)
+                
+                if analysis["status"] == "success":
+                    if analysis["breakout_score"] >= min_score:
+                        results.append({
+                            "symbol": symbol,
+                            "price": analysis["current_price"],
+                            "score": analysis["breakout_score"],
+                            "max_score": analysis["max_score"],
+                            "probability": analysis["breakout_probability"],
+                            "direction": analysis["direction_bias"],
+                            "signals": analysis["active_signals"],
+                            "signal_count": analysis["signal_count"],
+                            "recommendation": analysis["recommendation"],
+                            "resistance": analysis["nearest_resistance"],
+                            "support": analysis["nearest_support"],
+                            "nr_pattern": analysis["nr_patterns"]["nr7"] or analysis["nr_patterns"]["nr4"],
+                            "squeeze_on": analysis["ttm_squeeze"]["squeeze_on"],
+                            "squeeze_fired": analysis["ttm_squeeze"]["squeeze_fired"],
+                            "obv_divergence": analysis["obv_divergence"]["divergence"]
+                        })
+                else:
+                    errors.append({"symbol": symbol, "error": analysis.get("error", "Unknown")})
+                    
+            except Exception as e:
+                errors.append({"symbol": symbol, "error": str(e)})
+        
+        # Sort by score (highest first)
+        results.sort(key=lambda x: x["score"], reverse=True)
+        
+        # Categorize results
+        very_high = [r for r in results if r["probability"] == "VERY HIGH"]
+        high = [r for r in results if r["probability"] == "HIGH"]
+        moderate = [r for r in results if r["probability"] == "MODERATE"]
+        
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "total_scanned": len(symbols),
+            "total_setups": len(results),
+            "very_high_probability": very_high,
+            "high_probability": high,
+            "moderate_probability": moderate,
+            "all_results": results,
+            "errors": errors,
+            "scan_summary": f"Found {len(very_high)} VERY HIGH, {len(high)} HIGH, {len(moderate)} MODERATE probability setups"
+        }
+    
+    def quick_scan(self, top_n: int = 20) -> Dict:
+        """
+        Quick scan of popular stocks - optimized for speed.
+        Returns top N setups by score.
+        """
+        # Smaller list for faster scanning
+        quick_symbols = [
+            "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "AMD", "TSLA",
+            "JPM", "BAC", "V", "MA", "JNJ", "PFE", "WMT", "HD",
+            "XOM", "CVX", "SPY", "QQQ", "IWM", "PLTR", "SOFI", "COIN"
+        ]
+        
+        result = self.scan_market(quick_symbols, min_score=30)
+        
+        # Return only top N
+        if result["status"] == "success":
+            result["all_results"] = result["all_results"][:top_n]
+            
+        return result
 
 
 # Test the module
