@@ -45,6 +45,14 @@ except ImportError:
         FUNDAMENTALS_AVAILABLE = False
         st.sidebar.error("❌ Fundamentals unavailable")
 
+# Import Breakout Detector
+try:
+    from breakout_detector import BreakoutDetector
+    breakout_detector = BreakoutDetector(TWELVEDATA_API_KEY, FINNHUB_API_KEY)
+    BREAKOUT_DETECTOR_AVAILABLE = True
+except ImportError:
+    BREAKOUT_DETECTOR_AVAILABLE = False
+
 # Import AlphaVantage
 try:
     from alphavantage_client import AlphaVantageClient
@@ -524,7 +532,7 @@ if show_analysis:
         """, unsafe_allow_html=True)
 
         # Tabs
-        tab0, tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+        tab0, tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
             "🏆 MASTER SCORE",
             "🎯 AI Summary",
             "📊 Comprehensive Fundamentals",
@@ -533,7 +541,8 @@ if show_analysis:
             "📋 Raw Data",
             "🔮 Oracle Scanner",
             "📊 Options Pressure",
-            "🏊 Dark Pool"
+            "🏊 Dark Pool",
+            "💥 Breakout Detector"
         ])
 
         # Get all cached data with error handling
@@ -2578,6 +2587,182 @@ if show_analysis:
                 st.error(f"❌ Error in Dark Pool analysis: {e}")
                 import traceback
                 st.code(traceback.format_exc())
+
+        # ==================== TAB 9: BREAKOUT DETECTOR ====================
+        with tab9:
+            st.markdown("### 💥 Breakout Detector - Institutional Grade")
+            st.markdown("*Detect breakouts BEFORE they happen using multiple confirmation signals*")
+            
+            if BREAKOUT_DETECTOR_AVAILABLE:
+                try:
+                    with st.spinner("🔍 Analyzing breakout signals..."):
+                        breakout_result = breakout_detector.analyze_breakout(ticker)
+                    
+                    if breakout_result['status'] == 'success':
+                        # Main Score Display
+                        score = breakout_result['breakout_score']
+                        max_score = breakout_result['max_score']
+                        probability = breakout_result['breakout_probability']
+                        direction = breakout_result['direction_bias']
+                        
+                        # Color based on probability
+                        if probability == 'VERY HIGH':
+                            score_color = '#00ff00'
+                            glow = '0 0 30px #00ff00'
+                        elif probability == 'HIGH':
+                            score_color = '#90EE90'
+                            glow = '0 0 20px #90EE90'
+                        elif probability == 'MODERATE':
+                            score_color = '#FFD700'
+                            glow = '0 0 15px #FFD700'
+                        else:
+                            score_color = '#888'
+                            glow = 'none'
+                        
+                        # Direction emoji
+                        dir_emoji = '🚀' if direction == 'BULLISH' else '📉' if direction == 'BEARISH' else '↔️'
+                        
+                        st.markdown(f"""
+                        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 15px; margin-bottom: 20px;">
+                            <div style="font-size: 72px; font-weight: bold; color: {score_color}; text-shadow: {glow};">
+                                {score}/{max_score}
+                            </div>
+                            <div style="font-size: 24px; color: {score_color}; margin-top: 10px;">
+                                {probability} PROBABILITY {dir_emoji}
+                            </div>
+                            <div style="font-size: 18px; color: #aaa; margin-top: 5px;">
+                                Direction: <span style="color: {'#00ff00' if direction == 'BULLISH' else '#ff4444' if direction == 'BEARISH' else '#888'}; font-weight: bold;">{direction}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Recommendation
+                        st.markdown(f"### 💡 {breakout_result['recommendation']}")
+                        
+                        # Active Signals
+                        st.markdown("### ✅ Active Signals")
+                        if breakout_result['active_signals']:
+                            for signal in breakout_result['active_signals']:
+                                st.markdown(f"- {signal}")
+                        else:
+                            st.info("No strong signals detected currently")
+                        
+                        st.markdown("---")
+                        
+                        # Key Levels
+                        st.markdown("### 📐 Key Price Levels")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Current Price", f"${breakout_result['current_price']:.2f}")
+                        with col2:
+                            st.metric("Nearest Resistance", f"${breakout_result['nearest_resistance']:.2f}")
+                        with col3:
+                            st.metric("Nearest Support", f"${breakout_result['nearest_support']:.2f}")
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Pivot", f"${breakout_result['pivot']:.2f}")
+                        with col2:
+                            st.metric("R1", f"${breakout_result['resistance_1']:.2f}")
+                        with col3:
+                            st.metric("S1", f"${breakout_result['support_1']:.2f}")
+                        with col4:
+                            st.metric("R2", f"${breakout_result['resistance_2']:.2f}")
+                        
+                        st.markdown("---")
+                        
+                        # Signal Details
+                        st.markdown("### 📊 Signal Details")
+                        
+                        # NR Patterns
+                        nr = breakout_result['nr_patterns']
+                        with st.expander(f"📏 NR4/NR7 Patterns - {nr['signal_strength']}", expanded=False):
+                            st.markdown(nr['interpretation'])
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("NR4", "✅ YES" if nr['nr4'] else "❌ NO")
+                            with col2:
+                                st.metric("NR7", "✅ YES" if nr['nr7'] else "❌ NO")
+                            with col3:
+                                st.metric("Narrow Days", nr['consecutive_narrow_days'])
+                            st.caption(f"Range Percentile: {nr['range_percentile']}% | Latest Range: {nr['latest_range_pct']}%")
+                        
+                        # OBV Divergence
+                        obv = breakout_result['obv_divergence']
+                        obv_color = '🟢' if 'BULLISH' in obv['divergence'] else '🔴' if obv['divergence'] == 'BEARISH' else '⚪'
+                        with st.expander(f"📈 OBV Divergence - {obv_color} {obv['divergence']}", expanded=False):
+                            st.markdown(obv['interpretation'])
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("OBV Trend", obv['obv_trend'])
+                            with col2:
+                                st.metric("Price Trend", obv['price_trend'])
+                            with col3:
+                                st.metric("Divergence Strength", f"{obv['divergence_strength']}%")
+                        
+                        # TTM Squeeze
+                        ttm = breakout_result['ttm_squeeze']
+                        squeeze_emoji = '🔴' if ttm['squeeze_on'] else '🟢'
+                        with st.expander(f"💥 TTM Squeeze - {squeeze_emoji} {'ON' if ttm['squeeze_on'] else 'OFF'}", expanded=False):
+                            st.markdown(ttm['interpretation'])
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Squeeze Status", "ON 🔴" if ttm['squeeze_on'] else "OFF 🟢")
+                            with col2:
+                                st.metric("Bars", ttm['squeeze_count'])
+                            with col3:
+                                st.metric("Momentum", f"{ttm['momentum']:.4f}")
+                            if ttm['squeeze_fired']:
+                                st.success("🔥 SQUEEZE JUST FIRED! Breakout in progress!")
+                        
+                        # Support/Resistance Testing
+                        sr = breakout_result['sr_testing']
+                        with st.expander(f"🎯 S/R Testing - {sr['testing'] if sr['testing'] != 'NONE' else 'No Active Test'}", expanded=False):
+                            st.markdown(sr['interpretation'])
+                            if sr['testing'] != 'NONE':
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Testing", sr['testing'])
+                                with col2:
+                                    st.metric("Level", f"${sr['level']:.2f}")
+                                with col3:
+                                    st.metric("Touches", sr['touches'])
+                        
+                        # Volume Analysis
+                        vol = breakout_result['volume']
+                        with st.expander(f"📊 Volume Analysis - {vol['volume_pattern']}", expanded=False):
+                            st.markdown(vol['interpretation'])
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Volume Ratio", f"{vol['volume_ratio']:.2f}x")
+                            with col2:
+                                st.metric("Current Vol", f"{vol['current_volume']:,}")
+                            with col3:
+                                st.metric("Contracting", "✅ YES" if vol['volume_contracting'] else "❌ NO")
+                        
+                        # Chart Patterns
+                        pat = breakout_result['chart_patterns']
+                        with st.expander(f"📐 Chart Patterns - {pat['pattern'].replace('_', ' ') if pat['pattern'] != 'NONE' else 'None Detected'}", expanded=False):
+                            st.markdown(pat['interpretation'])
+                            if pat['pattern'] != 'NONE':
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("Pattern", pat['pattern'].replace('_', ' '))
+                                with col2:
+                                    st.metric("Bias", pat['bias'])
+                        
+                        st.markdown("---")
+                        st.caption(f"⏱️ Analysis timestamp: {breakout_result['timestamp'][:19]} | Data: TwelveData (Real-time)")
+                        
+                    else:
+                        st.error(f"❌ Error: {breakout_result.get('error', 'Unknown error')}")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error in Breakout Detector: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+            else:
+                st.error("❌ Breakout Detector module not available")
 
 else:
     # Welcome screen
