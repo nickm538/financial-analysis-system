@@ -875,6 +875,58 @@ if show_analysis:
             st.markdown("### 🏆 MASTER COMPOSITE SCORE")
             st.markdown("*AI-powered multi-factor analysis combining all data sources*")
             
+            # Professional Trader Education
+            with st.expander("🎓 **PRO TRADER GUIDE: How to Use the Master Score**", expanded=False):
+                st.markdown("""
+                #### What is the Master Score?
+                The Master Score is a **weighted composite** of 5 independent analysis systems, designed to give you 
+                a single number that captures the overall setup quality. Think of it as your "at-a-glance" decision tool.
+                
+                #### How the Weighting Works:
+                
+                | Category | Weight | Why This Weight |
+                |----------|--------|----------------|
+                | **Options Flow** | 25% | Smart money bets real money on options. Highest signal-to-noise ratio. |
+                | **Dark Pool** | 20% | Institutional activity hidden from retail. When they move, follow. |
+                | **Technical** | 25% | Price action is king. Trends persist until they don't. |
+                | **Fundamental** | 15% | Long-term anchor. Less weight because markets can stay irrational. |
+                | **Momentum** | 15% | Short-term edge. Captures current sentiment and velocity. |
+                
+                #### Score Interpretation:
+                
+                | Score Range | Signal | What It Means | Action |
+                |-------------|--------|---------------|--------|
+                | **80-100** | STRONG BUY | Multiple systems aligned bullish | Full position, high conviction |
+                | **65-79** | BUY | Most indicators positive | Standard position size |
+                | **50-64** | HOLD | Mixed signals | Wait for clarity or reduce size |
+                | **35-49** | WEAK | More bearish than bullish | Consider exit or short |
+                | **0-34** | SELL/SHORT | Multiple systems aligned bearish | Exit longs, consider shorts |
+                
+                #### 💡 Pro Tips from Institutional Traders:
+                
+                1. **Score + Trend = Edge**: A score of 70 in an uptrend is stronger than 70 in a downtrend
+                
+                2. **Watch for Divergences**: If Options Flow is 80 but Technical is 30, something's brewing. 
+                   Smart money might know something the chart doesn't show yet.
+                
+                3. **Confidence Matters**: A score of 65 with HIGH confidence beats 75 with LOW confidence.
+                   Low confidence means the signals are conflicting.
+                
+                4. **Category Disagreement = Opportunity**: When Dark Pool is bullish but price is falling, 
+                   institutions are accumulating. This often precedes big moves.
+                
+                5. **Don't Chase Extremes**: Scores above 90 or below 10 often mean you're late. 
+                   The best entries are 60-75 (bullish) or 25-40 (bearish) with momentum building.
+                
+                6. **Time Your Entry**: High score + squeeze firing + volume surge = IDEAL entry point.
+                
+                #### ⚠️ Common Mistakes to Avoid:
+                - Trading on score alone without checking the chart
+                - Ignoring risk assessment warnings
+                - Oversizing positions on high scores (even 90 scores fail 10% of the time)
+                - Not having a stop loss plan before entering
+                """)
+            
             try:
                 from composite_score import CompositeScoreEngine
                 from options_pressure import OptionsPressure
@@ -1081,6 +1133,69 @@ if show_analysis:
             try:
                 st.subheader("🎯 AI-Powered Analysis Summary")
                 st.markdown("### 📊 Comprehensive Scoring Dashboard")
+                
+                # Professional Trader Education
+                with st.expander("🎓 **PRO TRADER GUIDE: Understanding the Scoring System**", expanded=False):
+                    st.markdown("""
+                    #### The Three Pillars of Analysis
+                    
+                    This dashboard breaks down analysis into **Fundamental**, **Technical**, and **Composite** scores.
+                    Each tells a different story - together they paint the complete picture.
+                    
+                    #### Fundamental Score (Long-term Value)
+                    
+                    | Metric | What It Measures | Bullish Signal | Bearish Signal |
+                    |--------|------------------|----------------|----------------|
+                    | **P/E Ratio** | Price vs Earnings | <15 (undervalued) | >30 (overvalued) |
+                    | **Revenue Growth** | Business expansion | >15% YoY | Negative |
+                    | **Net Margin** | Profitability | >15% | <5% |
+                    | **ROE** | Return on Equity | >15% | <10% |
+                    | **Debt/Equity** | Financial health | <0.5 | >2.0 |
+                    
+                    **💡 Pro Tip**: High fundamental score + low technical score = potential VALUE PLAY. 
+                    The market hasn't recognized the value yet. Be patient or wait for technical confirmation.
+                    
+                    #### Technical Score (Short-term Momentum)
+                    
+                    | Indicator | What It Measures | Bullish Signal | Bearish Signal |
+                    |-----------|------------------|----------------|----------------|
+                    | **RSI** | Overbought/Oversold | 30-50 (oversold bounce) | 70-80 (overbought) |
+                    | **MACD** | Trend momentum | Crossing above signal | Crossing below signal |
+                    | **ADX** | Trend strength | >25 (strong trend) | <20 (no trend) |
+                    | **Price vs SMA** | Trend direction | Above 20 & 50 SMA | Below both SMAs |
+                    
+                    **💡 Pro Tip**: RSI oversold (30) + MACD about to cross up = classic reversal setup.
+                    RSI overbought (70) alone is NOT a sell signal in strong uptrends!
+                    
+                    #### Composite Score (The Synthesis)
+                    
+                    The composite score weights both fundamental and technical factors, but adds:
+                    - **Sentiment analysis** from news and social media
+                    - **Institutional activity** signals
+                    - **Sector relative strength**
+                    
+                    #### 🎯 Reading the Grades:
+                    
+                    | Grade | Score | Meaning | Typical Action |
+                    |-------|-------|---------|----------------|
+                    | **A+** | 90+ | Exceptional across all metrics | Strong conviction trade |
+                    | **A/A-** | 80-89 | Very strong | Standard position |
+                    | **B+/B** | 70-79 | Good with minor concerns | Smaller position or wait |
+                    | **C** | 50-69 | Mixed signals | Watch list only |
+                    | **D/F** | <50 | Significant concerns | Avoid or short |
+                    
+                    #### ⚠️ When Scores Disagree (This is where money is made!):
+                    
+                    - **High Fundamental + Low Technical**: Value trap OR accumulation opportunity. 
+                      Check if insiders are buying. If yes, institutions may be accumulating.
+                    
+                    - **Low Fundamental + High Technical**: Momentum play OR bubble. 
+                      Trade with tight stops. Don't hold long-term.
+                    
+                    - **Both Low**: Stay away. There are thousands of stocks - find a better one.
+                    
+                    - **Both High**: Ideal setup. These are rare - act decisively when you find them.
+                    """)
 
                 # Composite Score
                 st.markdown(f"""
@@ -1172,6 +1287,79 @@ if show_analysis:
         with tab2:
             st.subheader("📊 Comprehensive Fundamental Analysis")
             st.caption("Data Sources: Massive API + Finnhub + AlphaVantage (cached)")
+            
+            # Professional Trader Education
+            with st.expander("🎓 **PRO TRADER GUIDE: Fundamental Analysis Secrets**", expanded=False):
+                st.markdown("""
+                #### Why Fundamentals Matter (Even for Short-term Traders)
+                
+                Fundamentals are the **anchor** that eventually pulls price back to reality. While price can deviate 
+                wildly in the short term, over 6-12 months, fundamentals win. Understanding them helps you:
+                - Avoid value traps (cheap stocks that deserve to be cheap)
+                - Find hidden gems before institutions pile in
+                - Know when a stock is "priced for perfection" (dangerous)
+                
+                #### 💰 Valuation Metrics Deep Dive
+                
+                | Metric | Formula | Good | Great | Red Flag | Context |
+                |--------|---------|------|-------|----------|--------|
+                | **P/E Ratio** | Price ÷ EPS | 15-20 | <15 | >30 | Compare to sector average! Tech P/E of 25 is normal. |
+                | **Forward P/E** | Price ÷ Future EPS | <Current P/E | Much lower | Higher than current | Shows growth expectations |
+                | **PEG Ratio** | P/E ÷ Growth Rate | 1.0-1.5 | <1.0 | >2.0 | Best single valuation metric for growth stocks |
+                | **P/S Ratio** | Price ÷ Sales | <3 | <1 | >10 | Use for unprofitable growth companies |
+                | **P/B Ratio** | Price ÷ Book Value | <2 | <1 | >5 | Best for financials and asset-heavy companies |
+                
+                **💡 Pro Tip**: P/E alone is USELESS. Always compare to:
+                1. The company's historical P/E (is it cheap vs itself?)
+                2. Sector average P/E (is it cheap vs peers?)
+                3. Growth rate (PEG ratio)
+                
+                #### 📈 Profitability Metrics
+                
+                | Metric | What It Tells You | Excellent | Good | Concerning |
+                |--------|-------------------|-----------|------|------------|
+                | **Gross Margin** | Pricing power | >50% | >30% | <20% |
+                | **Operating Margin** | Operational efficiency | >20% | >10% | <5% |
+                | **Net Margin** | Bottom line profitability | >15% | >8% | <3% |
+                | **ROE** | Return on shareholder equity | >20% | >15% | <10% |
+                | **ROA** | Asset efficiency | >10% | >5% | <2% |
+                | **ROIC** | Capital allocation skill | >15% | >10% | <8% |
+                
+                **💡 Pro Tip**: Rising margins = operating leverage kicking in. This is VERY bullish.
+                Falling margins despite rising revenue = competition eating into pricing power. Bearish.
+                
+                #### 📊 Growth Metrics
+                
+                | Metric | Strong Growth | Moderate | Slow | Declining |
+                |--------|---------------|----------|------|----------|
+                | **Revenue Growth** | >25% | 10-25% | 5-10% | <5% |
+                | **EPS Growth** | >30% | 15-30% | 5-15% | <5% |
+                | **FCF Growth** | >20% | 10-20% | 5-10% | <5% |
+                
+                **💡 Pro Tip**: Revenue growth without EPS growth = the company is "buying" growth 
+                (spending too much on sales/marketing). Not sustainable.
+                
+                #### 💪 Financial Health
+                
+                | Metric | Healthy | Acceptable | Risky | Dangerous |
+                |--------|---------|------------|-------|----------|
+                | **Debt/Equity** | <0.3 | 0.3-0.7 | 0.7-1.5 | >1.5 |
+                | **Current Ratio** | >2.0 | 1.5-2.0 | 1.0-1.5 | <1.0 |
+                | **Interest Coverage** | >10x | 5-10x | 2-5x | <2x |
+                
+                **💡 Pro Tip**: High debt + rising interest rates = margin compression coming.
+                Companies with <0.3 D/E can weather any storm.
+                
+                #### 🎯 The "Perfect Fundamental Setup" Checklist:
+                ✅ P/E below sector average OR PEG < 1.0  
+                ✅ Revenue growth > 15%  
+                ✅ Net margin expanding (vs last year)  
+                ✅ ROE > 15%  
+                ✅ Debt/Equity < 0.5  
+                ✅ Insider buying in last 3 months  
+                
+                If 5/6 boxes checked = strong fundamental setup. Add technical confirmation for entry.
+                """)
 
             if FUNDAMENTALS_AVAILABLE and fundamentals:
                 # Valuation Metrics
@@ -1540,6 +1728,101 @@ if show_analysis:
         with tab3:
             st.subheader("📈 Technical Analysis (TwelveData)")
             st.caption("Data Source: TwelveData API (1-day interval, cached)")
+            
+            # Professional Trader Education
+            with st.expander("🎓 **PRO TRADER GUIDE: Technical Analysis Mastery**", expanded=False):
+                st.markdown("""
+                #### The Truth About Technical Analysis
+                
+                Technical analysis works because **enough people believe it works**. It's self-fulfilling.
+                When millions of traders see RSI at 30, they buy. That buying creates the bounce.
+                
+                The key is knowing **which indicators matter** and **when to trust them**.
+                
+                #### 📊 Momentum Indicators
+                
+                **RSI (Relative Strength Index)**
+                
+                | RSI Level | Traditional View | Pro Trader View |
+                |-----------|------------------|----------------|
+                | >80 | Overbought, sell | In strong uptrends, can stay >80 for weeks. Only sell on DIVERGENCE. |
+                | 70-80 | Overbought | Healthy uptrend. Look for pullbacks to 50-60 to add. |
+                | 50-70 | Neutral-bullish | Sweet spot for trend following |
+                | 30-50 | Neutral-bearish | Potential reversal zone if other signals align |
+                | <30 | Oversold, buy | In strong downtrends, can stay <30 for weeks. Only buy on DIVERGENCE. |
+                
+                **💡 RSI Pro Tips:**
+                - RSI divergence (price makes new low, RSI makes higher low) = POWERFUL reversal signal
+                - In uptrends, RSI tends to bounce off 40-50 (not 30)
+                - In downtrends, RSI tends to reject at 50-60 (not 70)
+                
+                **MACD (Moving Average Convergence Divergence)**
+                
+                | Signal | What It Means | Reliability |
+                |--------|---------------|-------------|
+                | MACD crosses above signal line | Bullish momentum starting | Medium - wait for confirmation |
+                | MACD crosses below signal line | Bearish momentum starting | Medium - wait for confirmation |
+                | MACD histogram growing | Momentum accelerating | High - trend strengthening |
+                | MACD histogram shrinking | Momentum fading | High - prepare for reversal |
+                | MACD divergence from price | Trend exhaustion | VERY HIGH - major reversal signal |
+                
+                **💡 MACD Pro Tips:**
+                - The HISTOGRAM is more important than the lines
+                - Histogram shrinking = momentum fading, even if MACD still positive
+                - MACD works best on daily/weekly charts. Noisy on intraday.
+                
+                #### 📉 Trend Indicators
+                
+                **Moving Averages**
+                
+                | Setup | Meaning | Action |
+                |-------|---------|--------|
+                | Price > 20 SMA > 50 SMA > 200 SMA | Perfect uptrend | Buy dips to 20 SMA |
+                | Price < 20 SMA < 50 SMA < 200 SMA | Perfect downtrend | Sell rallies to 20 SMA |
+                | 20 SMA crosses above 50 SMA | "Golden cross" forming | Bullish, but often late |
+                | 20 SMA crosses below 50 SMA | "Death cross" forming | Bearish, but often late |
+                | Price far above 20 SMA (>5%) | Extended, pullback likely | Take profits or wait |
+                
+                **💡 MA Pro Tips:**
+                - The 200 SMA is the "line in the sand" for institutions. Above = bullish bias. Below = bearish.
+                - Don't buy when price is >10% above 20 SMA - wait for pullback
+                - The 50 SMA often acts as support in uptrends
+                
+                **ADX (Average Directional Index)**
+                
+                | ADX Level | Trend Strength | Trading Approach |
+                |-----------|----------------|------------------|
+                | <20 | No trend (choppy) | Range trading or stay out |
+                | 20-25 | Trend emerging | Early entry opportunity |
+                | 25-40 | Strong trend | Trend following works well |
+                | 40-50 | Very strong trend | Don't fade it! |
+                | >50 | Extreme (rare) | Trend may be exhausting |
+                
+                **💡 ADX Pro Tips:**
+                - ADX rising from below 20 = NEW TREND STARTING. Best entry point!
+                - ADX doesn't tell you direction, only strength. Use +DI/-DI for direction.
+                - ADX > 25 + Squeeze firing = EXPLOSIVE move coming
+                
+                #### 🎯 Indicator Combinations That Actually Work:
+                
+                1. **The Reversal Setup**: RSI divergence + MACD histogram shrinking + price at support
+                   → High probability bounce
+                
+                2. **The Trend Continuation**: Price pulls back to 20 SMA + RSI at 50 + ADX > 25
+                   → Buy the dip in uptrend
+                
+                3. **The Breakout Setup**: ADX rising from <20 + Price breaking resistance + Volume surge
+                   → New trend starting
+                
+                4. **The Exhaustion Warning**: RSI >80 + MACD divergence + Price far from 20 SMA
+                   → Take profits, don't add
+                
+                #### ⚠️ Common Technical Analysis Mistakes:
+                - Using too many indicators (pick 3-4 max)
+                - Ignoring the trend (don't short in uptrends just because RSI is high)
+                - Not waiting for confirmation (one indicator is not enough)
+                - Ignoring volume (breakouts without volume fail)
+                """)
 
             if technicals.get('indicators'):
                 indicators = technicals['indicators']
@@ -1979,6 +2262,80 @@ if show_analysis:
                 <p>🎯 Multi-Day Runner Detection | 5:1 Risk/Reward | A+ Setups Only</p>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Professional Trader Education
+            with st.expander("🎓 **PRO TRADER GUIDE: The Oracle/Tim Bohen Methodology**", expanded=False):
+                st.markdown("""
+                #### What is the Oracle Scanner?
+                
+                The Oracle Scanner is based on **Tim Bohen's methodology** for finding multi-day runners - 
+                stocks that don't just pop once, but run for 2-5+ days. The key insight:
+                
+                > "The best trades aren't the ones that move 10% in a day. They're the ones that move 10% 
+                > for 3-4 days in a row." - Tim Bohen
+                
+                #### The 5:1 Risk/Reward Framework
+                
+                Every trade must have **at least 5:1 reward-to-risk**. Here's how it works:
+                
+                | Component | Calculation | Example |
+                |-----------|-------------|--------|
+                | **Entry** | Current price or breakout level | $50.00 |
+                | **Stop Loss** | Below recent support (1-2%) | $49.00 (2% risk) |
+                | **Target** | 5x the risk amount | $55.00 (10% gain) |
+                | **Risk per share** | Entry - Stop | $1.00 |
+                | **Reward per share** | Target - Entry | $5.00 |
+                | **Ratio** | Reward ÷ Risk | 5:1 ✅ |
+                
+                **💡 Why 5:1?** You only need to be right 20% of the time to break even. 
+                At 40% win rate (achievable), you're very profitable.
+                
+                #### What Makes a Multi-Day Runner?
+                
+                | Factor | What to Look For | Why It Matters |
+                |--------|------------------|----------------|
+                | **Catalyst** | News, earnings, FDA approval, contract | Gives a REASON for the move |
+                | **Volume** | 2x+ average volume on Day 1 | Confirms institutional interest |
+                | **Price Action** | Closes near high of day | Shows buyers in control |
+                | **Float** | Under 50M shares ideal | Low supply = bigger moves |
+                | **Short Interest** | >15% of float | Potential short squeeze fuel |
+                | **Sector** | Hot sector (AI, EV, biotech) | Sector momentum helps |
+                
+                #### The A+ Setup Checklist:
+                
+                ✅ **Catalyst present** (news within 24-48 hours)  
+                ✅ **Volume surge** (2x+ average)  
+                ✅ **Clean chart** (not extended, near support)  
+                ✅ **5:1 R/R achievable** (clear stop and target)  
+                ✅ **Market conditions favorable** (not in a crash)  
+                ✅ **Time of day** (best setups form 9:30-11:00 AM)  
+                
+                If ALL boxes checked = A+ setup. Trade with conviction.
+                If 4-5 boxes = B setup. Trade with smaller size.
+                If <4 boxes = Pass. Wait for better.
+                
+                #### 💡 Pro Tips for Multi-Day Runners:
+                
+                1. **Day 1 is for watching, Day 2 is for trading**: Let the stock prove itself on Day 1. 
+                   Enter on Day 2 pullback if it holds gains.
+                
+                2. **The "Higher Low" Rule**: If Day 2 makes a higher low than Day 1, the run is likely to continue.
+                
+                3. **Volume Confirmation**: Day 2 volume should be >50% of Day 1. If volume dies, so does the run.
+                
+                4. **The 9:45 Rule**: Wait until 9:45 AM to enter. The first 15 minutes are noise.
+                
+                5. **Scale Out**: Sell 1/3 at 1:1, 1/3 at 3:1, let 1/3 run with trailing stop.
+                
+                6. **News Fades**: If the stock gaps up huge on news and immediately sells off, 
+                   that's distribution. Don't chase.
+                
+                #### ⚠️ Common Mistakes:
+                - Chasing after a 20%+ move (you're late)
+                - No stop loss ("it'll come back" = account killer)
+                - Oversizing because you're "sure" (even A+ setups fail 40% of the time)
+                - Trading against the market trend (even great setups fail in crashes)
+                """)
             
             # Import Oracle modules
             try:
@@ -2469,6 +2826,82 @@ if show_analysis:
             </div>
             """, unsafe_allow_html=True)
             
+            # Professional Trader Education
+            with st.expander("🎓 **PRO TRADER GUIDE: Reading Options Flow Like Smart Money**", expanded=False):
+                st.markdown("""
+                #### Why Options Flow Matters
+                
+                Options are **leveraged bets** on future price direction. When someone buys $1M in calls, 
+                they're making a concentrated bet that the stock goes up. This is often "smart money" - 
+                hedge funds, insiders (legally), or informed traders.
+                
+                > "Follow the money. Options flow doesn't lie." - Every successful options trader
+                
+                #### Understanding Put/Call Ratio
+                
+                | P/C Ratio | Meaning | Interpretation |
+                |-----------|---------|----------------|
+                | **< 0.5** | Heavy call buying | Very bullish sentiment |
+                | **0.5 - 0.7** | More calls than puts | Bullish sentiment |
+                | **0.7 - 1.0** | Balanced | Neutral sentiment |
+                | **1.0 - 1.5** | More puts than calls | Bearish sentiment |
+                | **> 1.5** | Heavy put buying | Very bearish OR hedging |
+                
+                **💡 Pro Tip - The Contrarian Signal**: Extremely high P/C ratio (>1.5) at market lows 
+                often signals a BOTTOM. Everyone is bearish = time to buy. This is called "max pain."
+                
+                #### Types of Options Activity
+                
+                | Activity Type | What It Means | Signal Strength |
+                |---------------|---------------|----------------|
+                | **Call Sweep** | Aggressive buying across exchanges | VERY BULLISH |
+                | **Put Sweep** | Aggressive selling across exchanges | VERY BEARISH |
+                | **Block Trade** | Large single transaction | Institutional activity |
+                | **Unusual Volume** | 2x+ normal options volume | Something brewing |
+                | **OTM Calls** | Buying out-of-the-money calls | Speculative bullish bet |
+                | **ITM Puts** | Buying in-the-money puts | Hedging or bearish |
+                
+                #### Reading the Pressure Indicator
+                
+                | Pressure Level | What It Means | Action |
+                |----------------|---------------|--------|
+                | **Strong Bullish (>70)** | Heavy call buying, institutions accumulating | Look for entry on pullback |
+                | **Bullish (55-70)** | More calls than puts | Confirms bullish bias |
+                | **Neutral (45-55)** | Balanced flow | No clear direction |
+                | **Bearish (30-45)** | More puts than calls | Be cautious, reduce size |
+                | **Strong Bearish (<30)** | Heavy put buying | Avoid longs, consider shorts |
+                
+                #### 💡 Pro Tips from Options Traders:
+                
+                1. **Size Matters**: A $50K call buy is noise. A $5M call buy is signal.
+                   Look for LARGE unusual activity.
+                
+                2. **Expiration Matters**: 
+                   - Weekly options = short-term speculation
+                   - Monthly options = more conviction
+                   - LEAPS (1+ year) = institutional positioning
+                
+                3. **Strike Selection Tells a Story**:
+                   - ATM (at-the-money) = expects moderate move
+                   - OTM (out-of-the-money) = expects BIG move
+                   - Deep ITM = hedging or stock replacement
+                
+                4. **The "Golden Sweep"**: Call sweep + above ask price + near-term expiry + OTM strike
+                   = Someone knows something. This is the highest conviction signal.
+                
+                5. **Divergence is Key**: If stock is falling but call buying is increasing, 
+                   smart money is accumulating. Bullish divergence.
+                
+                6. **Earnings Plays**: Heavy call buying before earnings often means insiders 
+                   expect a beat. But be careful - this is priced in by market makers.
+                
+                #### ⚠️ What Options Flow DOESN'T Tell You:
+                - The exact timing of the move
+                - Whether it's a hedge (opposite of what it looks like)
+                - If the trader is right (even smart money is wrong 40% of the time)
+                
+                **Always combine options flow with technical and fundamental analysis.**
+                """)            
             try:
                 from options_pressure import OptionsPressure
                 
@@ -2676,6 +3109,91 @@ if show_analysis:
             st.markdown("### 🏊 Dark Pool Scanner")
             st.markdown("*Off-exchange trading analysis and short volume data*")
             
+            # Professional Trader Education
+            with st.expander("🎓 **PRO TRADER GUIDE: Dark Pool Trading Secrets**", expanded=False):
+                st.markdown("""
+                #### What Are Dark Pools?
+                
+                Dark pools are **private exchanges** where institutional investors trade large blocks of shares 
+                without showing their orders to the public market. Why? Because if you're buying 1 million shares, 
+                you don't want everyone to see your order and front-run you.
+                
+                > "Dark pools are where the whales swim. If you can see their footprints, you can follow them."
+                
+                #### Why Dark Pool Data Matters
+                
+                | Insight | What It Tells You | Trading Implication |
+                |---------|-------------------|--------------------|
+                | **High dark pool %** | Institutions are active | Big move may be coming |
+                | **Large block trades** | Whale accumulation/distribution | Follow the whale |
+                | **Dark pool vs price divergence** | Hidden accumulation | Bullish if buying while price flat |
+                | **Short volume spike** | Bearish pressure building | Caution on longs |
+                
+                #### Understanding the Metrics
+                
+                **Dark Pool Volume %**
+                
+                | DP Volume % | Interpretation |
+                |-------------|----------------|
+                | **< 30%** | Low institutional activity, retail-driven |
+                | **30-40%** | Normal institutional participation |
+                | **40-50%** | Above average institutional interest |
+                | **> 50%** | Heavy institutional activity - PAY ATTENTION |
+                
+                **Short Volume Ratio**
+                
+                | Short Ratio | Meaning | Context |
+                |-------------|---------|--------|
+                | **< 30%** | Low short interest | Bullish or no interest |
+                | **30-40%** | Normal shorting | Neutral |
+                | **40-50%** | Elevated shorting | Bears are active |
+                | **> 50%** | Heavy shorting | Potential squeeze OR real bearish pressure |
+                
+                **💡 Pro Tip**: High short volume + rising price = SHORT SQUEEZE potential. 
+                Shorts are trapped and will have to cover, pushing price higher.
+                
+                #### The Buy/Sell Classifier
+                
+                We classify dark pool trades as buys or sells using the **Lee-Ready Algorithm**:
+                - Trade at ask price = BUY
+                - Trade at bid price = SELL
+                - Trade in between = Use tick test (up-tick = buy, down-tick = sell)
+                
+                | Net Flow | Meaning | Signal |
+                |----------|---------|--------|
+                | **Strong Buy (>60%)** | Institutions accumulating | Bullish |
+                | **Slight Buy (50-60%)** | Mild accumulation | Slightly bullish |
+                | **Neutral (45-55%)** | Balanced flow | No clear direction |
+                | **Slight Sell (40-50%)** | Mild distribution | Slightly bearish |
+                | **Strong Sell (<40%)** | Institutions distributing | Bearish |
+                
+                #### 💡 Pro Tips for Dark Pool Analysis:
+                
+                1. **The Accumulation Pattern**: Dark pool buying + flat/declining price = STEALTH ACCUMULATION.
+                   Institutions are loading up before the move. Very bullish.
+                
+                2. **The Distribution Pattern**: Dark pool selling + rising price = SMART MONEY EXITING.
+                   Price is being propped up while big players exit. Very bearish.
+                
+                3. **Block Trade Timing**: Large block trades near support = accumulation. 
+                   Large block trades near resistance = distribution.
+                
+                4. **Combine with Options Flow**: Dark pool buying + heavy call buying = VERY HIGH conviction bullish.
+                   This is the "smart money alignment" signal.
+                
+                5. **Short Volume Context**: High short volume after a big run-up is NORMAL (profit taking).
+                   High short volume at lows is BEARISH (expecting more downside).
+                
+                6. **The "Whale Alert"**: Any single trade >$1M is worth noting. >$10M is a major signal.
+                
+                #### ⚠️ Limitations of Dark Pool Data:
+                - Data is delayed (not real-time)
+                - Can't always distinguish hedging from directional bets
+                - Institutions can be wrong too
+                - Some dark pool activity is market making, not directional
+                
+                **Use dark pool data as CONFIRMATION, not as the sole reason to trade.**
+                """)            
             try:
                 from dark_pool_scanner import DarkPoolScanner, BuySellClassifier
                 
@@ -2839,6 +3357,114 @@ if show_analysis:
             st.markdown("### 💥 Breakout Detector - Institutional Grade")
             st.markdown("*Detect breakouts BEFORE they happen using multiple confirmation signals*")
             
+            # Professional Trader Education
+            with st.expander("🎓 **PRO TRADER GUIDE: Mastering Breakout Trading**", expanded=False):
+                st.markdown("""
+                #### The Science of Breakouts
+                
+                Breakouts are the **holy grail** of trading. Catch one early, and you ride a wave. 
+                Miss it, and you're chasing. The key is detecting the SETUP before the breakout happens.
+                
+                > "The best breakouts come from the tightest consolidations." - Every profitable breakout trader
+                
+                #### Understanding Each Signal
+                
+                **1. NR4/NR7 (Narrowest Range) - Toby Crabel's Discovery**
+                
+                | Pattern | Definition | Historical Win Rate | Best Use |
+                |---------|------------|---------------------|----------|
+                | **NR4** | Smallest daily range in 4 days | ~65% | Good setups |
+                | **NR7** | Smallest daily range in 7 days | ~72% | High probability |
+                | **NR7+NR4** | Both together (rare) | ~80% | ELITE setups |
+                
+                **💡 Pro Tip**: NR7 inside a larger consolidation pattern (triangle, flag) is the 
+                highest probability setup. It's like a spring inside a spring.
+                
+                **2. TTM Squeeze - John Carter's Methodology**
+                
+                | State | What's Happening | Action |
+                |-------|------------------|--------|
+                | **Squeeze ON (red dots)** | Bollinger Bands inside Keltner Channels | WAIT - energy building |
+                | **Squeeze OFF (green dots)** | BB expanded outside KC | Breakout in progress |
+                | **Squeeze FIRED** | Just transitioned from ON to OFF | ENTRY SIGNAL! |
+                
+                **💡 Pro Tip**: The LONGER the squeeze (more red dots), the BIGGER the eventual move.
+                6+ bars of squeeze = explosive potential. But momentum direction matters!
+                
+                **3. OBV Divergence - Joe Granville's Volume Analysis**
+                
+                | Divergence Type | Price Action | OBV Action | Meaning |
+                |-----------------|--------------|------------|--------|
+                | **Bullish** | Lower lows | Higher lows | Accumulation! Reversal coming |
+                | **Hidden Bullish** | Flat/up | Strongly up | Stealth buying, breakout imminent |
+                | **Bearish** | Higher highs | Lower highs | Distribution! Top forming |
+                | **Hidden Bearish** | Flat/down | Strongly down | Stealth selling, breakdown coming |
+                
+                **💡 Pro Tip**: OBV divergence is most powerful at support/resistance levels.
+                OBV bullish divergence at support = HIGH probability bounce.
+                
+                **4. Support/Resistance Testing**
+                
+                | # of Tests | Probability of Break | Strategy |
+                |------------|---------------------|----------|
+                | 2 tests | ~50% | Watch and wait |
+                | 3 tests | ~65% | Prepare for entry |
+                | 4+ tests | ~75% | High probability break |
+                
+                **💡 Pro Tip**: Each test WEAKENS the level. But failed breakouts happen. 
+                Wait for the candle to CLOSE above/below the level before entering.
+                
+                #### 🔥 The Synergy Bonuses (Where Real Edge Lives)
+                
+                Individual signals are good. COMBINATIONS are great. Here's what the pros look for:
+                
+                | Combination | Name | What It Means | Edge |
+                |-------------|------|---------------|------|
+                | NR7 + Squeeze ON | "Coiled Spring" | Maximum energy compression | +15 bonus |
+                | OBV Bullish + Volume Contracting | "Stealth Accumulation" | Smart money loading quietly | +10 bonus |
+                | Pattern + S/R Testing | "Technical Confluence" | Multiple technicals aligned | +10 bonus |
+                | RSI Div + OBV Div (same direction) | "Momentum Alignment" | All momentum indicators agree | +10 bonus |
+                | ADX Emerging + Squeeze Firing | "Trend Confirmation" | New trend starting with power | +15 bonus |
+                
+                **💡 Pro Tip**: A score of 60 with 2 synergy bonuses is BETTER than a score of 70 with none.
+                Synergies indicate the signals are CONFIRMING each other, not just coincidentally present.
+                
+                #### 🎯 The Perfect Breakout Entry Checklist
+                
+                ✅ Score > 60 (preferably > 70)  
+                ✅ At least one synergy bonus active  
+                ✅ Direction bias matches your trade (don't short a bullish setup!)  
+                ✅ Squeeze fired OR about to fire  
+                ✅ Volume increasing on breakout candle  
+                ✅ Stop loss clearly defined (below support or NR range)  
+                ✅ Risk/reward at least 2:1 (preferably 3:1+)  
+                
+                #### 💰 Position Sizing Based on Score
+                
+                | Score | Position Size | Reasoning |
+                |-------|---------------|----------|
+                | 80-100 | Full size | High conviction, multiple confirmations |
+                | 65-79 | 75% size | Good setup, slight uncertainty |
+                | 50-64 | 50% size | Developing setup, wait for more confirmation |
+                | <50 | No trade | Insufficient edge, be patient |
+                
+                #### ⚠️ Breakout Trading Mistakes to Avoid:
+                
+                1. **Chasing the breakout**: If you missed the entry, WAIT for a pullback. Don't FOMO.
+                
+                2. **No stop loss**: The #1 account killer. ALWAYS have a stop before entering.
+                
+                3. **Ignoring failed breakouts**: If price breaks out then immediately reverses, 
+                   that's a FAILED breakout. Exit immediately. These can become waterfall declines.
+                
+                4. **Trading against the trend**: A bullish breakout in a bear market has lower odds.
+                   Check the macro context first.
+                
+                5. **Overtrading**: Not every day has a great breakout setup. Sometimes the best trade is no trade.
+                
+                6. **Ignoring volume**: Breakouts without volume confirmation often fail. 
+                   Volume should be 1.5x+ average on the breakout candle.
+                """)            
             if BREAKOUT_DETECTOR_AVAILABLE:
                 try:
                     with st.spinner("🔍 Analyzing breakout signals..."):
