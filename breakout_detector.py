@@ -846,14 +846,47 @@ class BreakoutDetector:
     
     def quick_scan(self, top_n: int = 20) -> Dict:
         """
-        Quick scan of popular stocks - optimized for speed.
+        Quick scan of top 100 stocks and ETFs for breakout setups.
         Returns top N setups by score.
+        
+        NOTE: With TwelveData free tier (8 req/min), this takes ~12-15 minutes.
         """
-        # Smaller list for faster scanning
+        # Top 100 stocks and ETFs by market cap and trading volume
         quick_symbols = [
-            "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "AMD", "TSLA",
-            "JPM", "BAC", "V", "MA", "JNJ", "PFE", "WMT", "HD",
-            "XOM", "CVX", "SPY", "QQQ", "IWM", "PLTR", "SOFI", "COIN"
+            # === MEGA CAP TECH (10) ===
+            "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "AVGO", "ORCL", "ADBE",
+            
+            # === LARGE CAP TECH (10) ===
+            "CRM", "AMD", "INTC", "CSCO", "IBM", "QCOM", "TXN", "NOW", "INTU", "AMAT",
+            
+            # === FINANCIALS (10) ===
+            "JPM", "BAC", "WFC", "GS", "MS", "C", "BLK", "SCHW", "AXP", "USB",
+            
+            # === PAYMENTS/FINTECH (5) ===
+            "V", "MA", "PYPL", "SQ", "COIN",
+            
+            # === HEALTHCARE (10) ===
+            "UNH", "JNJ", "PFE", "ABBV", "MRK", "LLY", "TMO", "ABT", "DHR", "BMY",
+            
+            # === CONSUMER (10) ===
+            "WMT", "HD", "COST", "NKE", "MCD", "SBUX", "TGT", "LOW", "TJX", "AMZN",
+            
+            # === ENERGY (8) ===
+            "XOM", "CVX", "COP", "SLB", "EOG", "MPC", "PSX", "VLO",
+            
+            # === INDUSTRIALS (8) ===
+            "CAT", "BA", "GE", "UPS", "RTX", "HON", "LMT", "DE",
+            
+            # === COMMUNICATIONS (5) ===
+            "NFLX", "DIS", "CMCSA", "T", "VZ",
+            
+            # === POPULAR MOMENTUM/GROWTH (10) ===
+            "PLTR", "SOFI", "HOOD", "RIVN", "LCID", "NIO", "MARA", "RIOT", "AFRM", "UPST",
+            
+            # === MAJOR ETFs (14) ===
+            "SPY", "QQQ", "IWM", "DIA",  # Index ETFs
+            "XLF", "XLE", "XLK", "XLV", "XLI", "XLY", "XLP", "XLU",  # Sector ETFs
+            "GLD", "SLV",  # Commodities
         ]
         
         result = self.scan_market(quick_symbols, min_score=30)

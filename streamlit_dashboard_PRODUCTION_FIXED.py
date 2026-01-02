@@ -496,19 +496,53 @@ with st.expander("🚀 **QUICK ACCESS: Full Market 5:1 Scanner** (Click to expan
 with st.expander("💥 **QUICK ACCESS: Breakout Detector Scanner** (Click to expand)", expanded=False):
     st.markdown("""
     ### 🔍 Scan Market for Breakout Setups
-    Find stocks with high-probability breakout signals (NR4/NR7, TTM Squeeze, OBV Divergence, etc.)
+    Find stocks with high-probability breakout signals before the big move happens.
     """)
+    
+    # Educational section for beginners
+    with st.expander("🎓 **NEW TO BREAKOUTS? Click here to learn what this scanner detects**", expanded=False):
+        st.markdown("""
+        #### What is a Breakout?
+        A **breakout** occurs when a stock's price moves outside a defined support or resistance level with increased volume. 
+        Think of it like a coiled spring - the stock builds up energy (consolidates) and then releases it in a big move.
+        
+        #### Signals This Scanner Detects:
+        
+        | Signal | What It Means | Why It Matters |
+        |--------|---------------|----------------|
+        | **NR4/NR7** | Narrowest trading range in 4 or 7 days | Like a coiled spring - tight range = energy building up for a big move |
+        | **TTM Squeeze** | Bollinger Bands inside Keltner Channels | Volatility compression - when it "fires," expect explosive movement |
+        | **OBV Divergence** | Volume trend differs from price trend | Smart money accumulating/distributing before price catches up |
+        | **S/R Testing** | Price repeatedly hitting support/resistance | The more tests, the more likely the level breaks |
+        | **Volume Pattern** | Declining volume during consolidation | Healthy setup - volume should spike ON the breakout |
+        
+        #### How to Read the Results:
+        
+        - **Score**: Higher is better (max 100). Score 70+ = Very High probability
+        - **Direction**: BULLISH (expect up move) or BEARISH (expect down move)
+        - **Squeeze 🔴 ON**: Volatility compressed - breakout building
+        - **Squeeze 🔥 FIRED**: Breakout in progress NOW!
+        - **Squeeze 🟢 OFF**: Normal volatility - no squeeze setup
+        - **NR Pattern ✅**: Tight range detected - energy building
+        
+        #### ⚠️ Important Tips for Beginners:
+        1. **Never trade on one signal alone** - Look for multiple confirmations
+        2. **Wait for the breakout to confirm** - Don't jump in too early
+        3. **Set a stop loss** - Usually just below the breakout level
+        4. **Check the macro context** - Even great setups fail in bad markets
+        5. **Start with paper trading** - Practice before risking real money
+        """)
     
     breakout_col1, breakout_col2 = st.columns([1, 2])
     
     with breakout_col1:
-        if st.button("💥 SCAN BREAKOUTS", key="quick_breakout_scan_btn", type="primary", help="Scans 24 popular stocks for breakout setups"):
+        if st.button("💥 SCAN 100 STOCKS", key="quick_breakout_scan_btn", type="primary", help="Scans top 100 stocks & ETFs for breakout setups"):
             try:
                 from breakout_detector import BreakoutDetector
                 bd = BreakoutDetector(TWELVEDATA_API_KEY, FINNHUB_API_KEY)
                 
-                with st.spinner("🔍 Scanning for breakout setups... This takes 1-2 minutes (rate limited)..."):
-                    breakout_scan_results = bd.quick_scan(top_n=15)
+                with st.spinner("🔍 Scanning 100 stocks for breakout setups... This takes 12-15 minutes (API rate limited to 8/min)..."):
+                    breakout_scan_results = bd.quick_scan(top_n=25)
                     st.session_state['quick_breakout_results'] = breakout_scan_results
             except Exception as e:
                 st.error(f"Breakout Scanner error: {e}")
@@ -568,6 +602,17 @@ with st.expander("💥 **QUICK ACCESS: Breakout Detector Scanner** (Click to exp
                 st.info("No breakout setups found meeting minimum criteria. Try again during market hours.")
             else:
                 st.info("💡 Enter any ticker in the sidebar and click 'Analyze Stock' for full breakout analysis.")
+            
+            # Post-results tips
+            st.markdown("---")
+            st.markdown("""
+            #### 🎯 Next Steps After Finding a Setup:
+            1. **Click on the ticker** and enter it in the sidebar for full analysis
+            2. **Check the Macro Context** below - don't trade against the market
+            3. **Look at the chart** - confirm the pattern visually
+            4. **Set your entry, stop loss, and target** BEFORE entering
+            5. **Size your position** - never risk more than 1-2% of your account on one trade
+            """)
         else:
             st.error(f"Scan failed: {bo_results.get('error', 'Unknown error')}")
 
@@ -577,8 +622,38 @@ st.markdown("---")
 with st.expander("🌍 **QUICK ACCESS: Market Macro Context** (Click to expand)", expanded=False):
     st.markdown("""
     ### 📊 Current Market Conditions
-    VIX, sector rotation, market breadth - factors that affect ALL trades.
+    Before trading ANY setup, check the overall market environment. Even the best setups can fail in bad markets.
     """)
+    
+    # Educational section for beginners
+    with st.expander("🎓 **NEW TO MACRO ANALYSIS? Click here to learn what these indicators mean**", expanded=False):
+        st.markdown("""
+        #### Why Does Macro Context Matter?
+        Individual stocks don't trade in isolation - they're affected by the overall market. 
+        A great breakout setup can fail if the entire market is selling off. **Always check macro before trading!**
+        
+        #### Key Indicators Explained:
+        
+        | Indicator | What It Measures | How to Use It |
+        |-----------|------------------|---------------|
+        | **VIX** | Market fear/greed ("Fear Index") | Low VIX (<15) = complacent market. High VIX (>25) = fearful market. Extreme readings often mark turning points. |
+        | **Market Breadth** | Are most stocks participating? | If SPY is up but IWM (small caps) is down, the rally may be weak. Broad participation = healthy trend. |
+        | **Sector Rotation** | Where is money flowing? | Money rotating to defensive sectors (utilities, staples) = risk-off. Money in tech/discretionary = risk-on. |
+        
+        #### VIX Levels Cheat Sheet:
+        - **Below 12**: ⚠️ Extreme complacency - market may be too confident (potential top)
+        - **12-16**: 🟢 Low fear - good for trend-following strategies
+        - **16-20**: 🟡 Normal conditions
+        - **20-25**: 🟠 Elevated fear - be cautious, reduce position sizes
+        - **25-30**: 🔴 High fear - volatile conditions, potential for sharp reversals
+        - **Above 30**: 🔴 Extreme fear - historically marks bottoms (contrarian buy signal?)
+        
+        #### 💡 Pro Tips:
+        1. **Don't fight the trend** - If macro is bearish, focus on short setups or stay cash
+        2. **VIX spikes = opportunity** - Extreme fear often creates the best buying opportunities
+        3. **Watch sector rotation** - Leading sectors today often lead tomorrow
+        4. **Breadth divergence is a warning** - If indices rise but breadth weakens, be cautious
+        """)
     
     if st.button("🌍 GET MACRO CONTEXT", key="quick_macro_btn", type="primary", help="Analyzes current market conditions"):
         try:
@@ -628,6 +703,35 @@ with st.expander("🌍 **QUICK ACCESS: Market Macro Context** (Click to expand)"
             for i, leader in enumerate(macro_data['sector_rotation']['leaders'][:3]):
                 with leader_cols[i]:
                     st.metric(f"#{i+1} {leader['name']}", f"{leader['daily_return']:+.2f}%")
+        
+        # Actionable advice based on macro
+        st.markdown("---")
+        st.markdown("#### 🎯 What This Means For Your Trading:")
+        
+        if macro_data['overall_risk'] == "LOW":
+            st.success("""
+            **🟢 GREEN LIGHT** - Favorable conditions for breakout trading:
+            - Normal position sizes are appropriate
+            - Bullish setups have higher probability of success
+            - Consider holding winners longer
+            """)
+        elif macro_data['overall_risk'] == "MODERATE":
+            st.warning("""
+            **🟡 YELLOW LIGHT** - Proceed with caution:
+            - Reduce position sizes by 25-50%
+            - Take profits quicker than usual
+            - Be extra selective with setups
+            - Have tighter stop losses
+            """)
+        else:
+            st.error("""
+            **🔴 RED LIGHT** - High risk environment:
+            - Consider staying in cash or reducing exposure significantly
+            - Only trade the highest-conviction setups
+            - Use very small position sizes (25% of normal)
+            - Consider bearish/short setups instead
+            - Extreme fear can also mean opportunity for contrarians
+            """)
 
 st.markdown("---")
 
