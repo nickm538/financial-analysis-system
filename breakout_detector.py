@@ -846,12 +846,12 @@ class BreakoutDetector:
     
     def quick_scan(self, top_n: int = 20) -> Dict:
         """
-        Quick scan of top 100 stocks and ETFs for breakout setups.
+        Quick scan of top 125 stocks and ETFs for breakout setups.
         Returns top N setups by score.
         
-        NOTE: With TwelveData free tier (8 req/min), this takes ~12-15 minutes.
+        NOTE: With TwelveData free tier (8 req/min), this takes ~15-18 minutes.
         """
-        # Top 100 stocks and ETFs by market cap and trading volume
+        # Top 125 stocks and ETFs by market cap and trading volume
         quick_symbols = [
             # === MEGA CAP TECH (10) ===
             "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "AVGO", "ORCL", "ADBE",
@@ -869,7 +869,7 @@ class BreakoutDetector:
             "UNH", "JNJ", "PFE", "ABBV", "MRK", "LLY", "TMO", "ABT", "DHR", "BMY",
             
             # === CONSUMER (10) ===
-            "WMT", "HD", "COST", "NKE", "MCD", "SBUX", "TGT", "LOW", "TJX", "AMZN",
+            "WMT", "HD", "COST", "NKE", "MCD", "SBUX", "TGT", "LOW", "TJX", "DG",
             
             # === ENERGY (8) ===
             "XOM", "CVX", "COP", "SLB", "EOG", "MPC", "PSX", "VLO",
@@ -882,6 +882,16 @@ class BreakoutDetector:
             
             # === POPULAR MOMENTUM/GROWTH (10) ===
             "PLTR", "SOFI", "HOOD", "RIVN", "LCID", "NIO", "MARA", "RIOT", "AFRM", "UPST",
+            
+            # === SMALL CAP STOCKS (20) ===
+            "PLUG", "FCEL", "SPCE", "BBBY", "AMC",  # Meme/Retail favorites
+            "CRSP", "BEAM", "NTLA", "EDIT", "VERV",  # Biotech small caps
+            "IONQ", "RGTI", "QUBT",  # Quantum computing
+            "SMCI", "AI", "BBAI", "SOUN",  # AI small caps
+            "RKLB", "LUNR", "RDW",  # Space/aerospace small caps
+            
+            # === SMALL CAP ETFs (5) ===
+            "IJR", "VB", "SCHA", "VTWO", "IWO",  # Small cap ETFs
             
             # === MAJOR ETFs (14) ===
             "SPY", "QQQ", "IWM", "DIA",  # Index ETFs

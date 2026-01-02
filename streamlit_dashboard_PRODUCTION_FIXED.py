@@ -536,13 +536,13 @@ with st.expander("💥 **QUICK ACCESS: Breakout Detector Scanner** (Click to exp
     breakout_col1, breakout_col2 = st.columns([1, 2])
     
     with breakout_col1:
-        if st.button("💥 SCAN 100 STOCKS", key="quick_breakout_scan_btn", type="primary", help="Scans top 100 stocks & ETFs for breakout setups"):
+        if st.button("💥 SCAN 125 STOCKS", key="quick_breakout_scan_btn", type="primary", help="Scans top 125 stocks & ETFs (including small caps) for breakout setups"):
             try:
                 from breakout_detector import BreakoutDetector
                 bd = BreakoutDetector(TWELVEDATA_API_KEY, FINNHUB_API_KEY)
                 
-                with st.spinner("🔍 Scanning 100 stocks for breakout setups... This takes 12-15 minutes (API rate limited to 8/min)..."):
-                    breakout_scan_results = bd.quick_scan(top_n=25)
+                with st.spinner("🔍 Scanning 125 stocks for breakout setups... This takes 15-18 minutes (API rate limited to 8/min)..."):
+                    breakout_scan_results = bd.quick_scan(top_n=30)
                     st.session_state['quick_breakout_results'] = breakout_scan_results
             except Exception as e:
                 st.error(f"Breakout Scanner error: {e}")
@@ -574,27 +574,32 @@ with st.expander("💥 **QUICK ACCESS: Breakout Detector Scanner** (Click to exp
             if bo_results['high_probability']:
                 st.markdown("#### 📈 HIGH Probability Breakouts:")
                 h_data = []
-                for setup in bo_results['high_probability'][:5]:
+                for setup in bo_results['high_probability'][:10]:  # Show up to 10 high probability
                     h_data.append({
                         'Ticker': setup['symbol'],
                         'Price': f"${setup['price']:.2f}",
                         'Score': f"{setup['score']}/{setup['max_score']}",
                         'Direction': setup['direction'],
                         'Signals': setup['signal_count'],
-                        'Squeeze': '🔴 ON' if setup['squeeze_on'] else ('🔥 FIRED' if setup['squeeze_fired'] else '🟢 OFF')
+                        'Squeeze': '🔴 ON' if setup['squeeze_on'] else ('🔥 FIRED' if setup['squeeze_fired'] else '🟢 OFF'),
+                        'NR Pattern': '✅' if setup['nr_pattern'] else '❌'
                     })
                 st.dataframe(pd.DataFrame(h_data), use_container_width=True, hide_index=True)
             
-            # Moderate Probability
-            if bo_results['moderate_probability'] and not bo_results['very_high_probability'] and not bo_results['high_probability']:
-                st.markdown("#### 📊 Moderate Probability (Developing):")
+            # ALWAYS show top 5 Moderate Probability setups (removed the condition that hid them)
+            if bo_results['moderate_probability']:
+                st.markdown("#### 📊 Top 5 MODERATE Probability (Developing Setups):")
+                st.caption("💡 These setups are building momentum - watch for signals to strengthen")
                 m_data = []
-                for setup in bo_results['moderate_probability'][:5]:
+                for setup in bo_results['moderate_probability'][:5]:  # Always show top 5
                     m_data.append({
                         'Ticker': setup['symbol'],
                         'Price': f"${setup['price']:.2f}",
                         'Score': f"{setup['score']}/{setup['max_score']}",
-                        'Direction': setup['direction']
+                        'Direction': setup['direction'],
+                        'Signals': setup['signal_count'],
+                        'Squeeze': '🔴 ON' if setup['squeeze_on'] else ('🔥 FIRED' if setup['squeeze_fired'] else '🟢 OFF'),
+                        'NR Pattern': '✅' if setup.get('nr_pattern') else '❌'
                     })
                 st.dataframe(pd.DataFrame(m_data), use_container_width=True, hide_index=True)
             
