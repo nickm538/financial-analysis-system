@@ -54,6 +54,13 @@ try:
 except ImportError:
     SMART_MONEY_AVAILABLE = False
 
+# Unified Market Context Engine (Macro + Micro)
+try:
+    from market_context_engine import MarketContextEngine
+    MARKET_CONTEXT_AVAILABLE = True
+except ImportError:
+    MARKET_CONTEXT_AVAILABLE = False
+
 # OpenAI client
 from openai import OpenAI
 
@@ -96,6 +103,7 @@ YOUR CAPABILITIES:
    - Macro Context: VIX sentiment, market breadth, sector rotation
    - FinancialDatasets.ai: Premium financial metrics, company facts, news sentiment, SEC filings
    - Smart Money Tracker: Congress trades, insider transactions, institutional holdings, dark pool flow
+   - Market Context Engine: Unified macro (50%) + micro (50%) analysis for complete picture
 
 2. PATTERN RECOGNITION - Identify patterns humans miss:
    - Historical price pattern matching
@@ -185,6 +193,9 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
         
         # Initialize Smart Money Tracker (Congress, Insider, Institutional, Dark Pool)
         self.smart_money = SmartMoneyTracker() if SMART_MONEY_AVAILABLE else None
+        
+        # Initialize Unified Market Context Engine (Macro + Micro equally weighted)
+        self.market_context = MarketContextEngine() if MARKET_CONTEXT_AVAILABLE else None
         
         # Conversation history for context
         self.conversation_history = []
@@ -328,7 +339,16 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
             except Exception as e:
                 analysis["engines"]["smart_money"] = {"status": "error", "error": str(e)}
         
-        # 8. Calculate Composite Score
+        # 8. Unified Market Context (Macro + Micro equally weighted)
+        if self.market_context:
+            try:
+                unified_context = self.market_context.get_unified_context(symbol)
+                if unified_context.get("status") == "success":
+                    analysis["engines"]["market_context"] = unified_context
+            except Exception as e:
+                analysis["engines"]["market_context"] = {"status": "error", "error": str(e)}
+        
+        # 9. Calculate Composite Score
         try:
             composite = self.composite_engine.calculate_master_score(
                 options_data=analysis["engines"].get("options"),
@@ -602,6 +622,40 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
             # Recommendation
             if sm.get("recommendation"):
                 sections.append(f"  RECOMMENDATION: {sm.get('recommendation')}")
+            sections.append("")
+        
+        # Unified Market Context (Macro + Micro equally weighted)
+        if engines.get("market_context", {}).get("status") == "success":
+            mc = engines["market_context"]
+            sections.append("🌍 UNIFIED MARKET CONTEXT (50% Macro + 50% Micro):")
+            sections.append(f"  UNIFIED SCORE: {mc.get('unified_score', 50)}/100")
+            sections.append(f"  UNIFIED SIGNAL: {mc.get('unified_signal', 'N/A')}")
+            sections.append(f"  CONFIDENCE: {mc.get('confidence', 'N/A')}")
+            
+            # Macro breakdown
+            macro = mc.get("macro", {})
+            if macro.get("status") == "success":
+                sections.append(f"  MACRO SCORE: {macro.get('macro_score', 50)}/100 ({macro.get('macro_signal', 'N/A')})")
+                for factor in macro.get("key_factors", [])[:2]:
+                    sections.append(f"    📊 {factor}")
+            
+            # Micro breakdown
+            micro = mc.get("micro", {})
+            if micro.get("status") == "success":
+                sections.append(f"  MICRO SCORE: {micro.get('micro_score', 50)}/100 ({micro.get('micro_signal', 'N/A')})")
+                for factor in micro.get("key_factors", [])[:2]:
+                    sections.append(f"    🔬 {factor}")
+            
+            # Key insights
+            insights = mc.get("key_insights", [])
+            if insights:
+                sections.append("  KEY INSIGHTS:")
+                for insight in insights[:4]:
+                    sections.append(f"    {insight}")
+            
+            # Recommendation
+            if mc.get("recommendation"):
+                sections.append(f"  CONTEXT RECOMMENDATION: {mc.get('recommendation')}")
             sections.append("")
         
         return "\n".join(sections)
