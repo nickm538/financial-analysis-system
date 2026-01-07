@@ -1076,20 +1076,22 @@ class BreakoutDetector:
         synergy_bonus_capped = min(30, synergy_bonus)
         
         # Quality multiplier based on signal strength (applied to base only)
+        # Quality multiplier - conservative to avoid overfitting
+        # Only boost when signals are exceptionally strong
         quality_factors = []
         if nr_patterns["signal_strength"] == "VERY_STRONG":
-            quality_factors.append(1.08)
-        if obv_divergence["divergence_strength"] > 70:
-            quality_factors.append(1.08)
+            quality_factors.append(1.05)  # Reduced from 1.08
+        if obv_divergence["divergence_strength"] > 75:  # Raised threshold from 70
+            quality_factors.append(1.05)  # Reduced from 1.08
         if ttm_squeeze["momentum_increasing"]:
-            quality_factors.append(1.04)
+            quality_factors.append(1.03)  # Reduced from 1.04
         if volume["institutional_activity"] == "HIGH":
-            quality_factors.append(1.08)
+            quality_factors.append(1.05)  # Reduced from 1.08
         
         quality_multiplier = 1.0
         for qf in quality_factors:
             quality_multiplier *= qf
-        quality_multiplier = min(1.25, quality_multiplier)  # Cap at 1.25x
+        quality_multiplier = min(1.15, quality_multiplier)  # Reduced cap from 1.25x to 1.15x
         
         # Apply quality multiplier to base score, then add synergy bonus
         # This preserves granularity at high scores
@@ -1097,8 +1099,9 @@ class BreakoutDetector:
         raw_score = adjusted_base + synergy_bonus_capped
         
         # Final score: scale to 0-100 with proper distribution
-        # Max possible: 100 * 1.25 + 30 = 155, scale down
-        final_score = min(100, int(raw_score * 0.75))  # Scale factor to keep 100 as rare
+        # Max possible: 100 * 1.15 + 30 = 145, scale down
+        # Using 0.72 to make scores more conservative and avoid overfitting
+        final_score = min(100, int(raw_score * 0.72))  # Slightly more conservative scaling
         
         # Ensure minimum score of 5 if any signal is present
         if len(signals) > 0 and final_score < 5:

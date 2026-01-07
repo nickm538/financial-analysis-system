@@ -343,14 +343,15 @@ class DarkPoolScanner:
         total_adjustment = sum(score_adjustments)
         result['overall_score'] = max(0, min(100, base_score + total_adjustment))
         
-        # Determine overall sentiment
-        if result['overall_score'] >= 70:
+        # Determine overall sentiment (symmetric thresholds around 50)
+        # BULLISH: 65+ | SLIGHTLY_BULLISH: 55-64 | NEUTRAL: 45-54 | SLIGHTLY_BEARISH: 35-44 | BEARISH: <35
+        if result['overall_score'] >= 65:
             result['overall_sentiment'] = 'BULLISH'
             result['overall_color'] = '#00c851'
         elif result['overall_score'] >= 55:
             result['overall_sentiment'] = 'SLIGHTLY_BULLISH'
             result['overall_color'] = '#4CAF50'
-        elif result['overall_score'] <= 30:
+        elif result['overall_score'] <= 35:
             result['overall_sentiment'] = 'BEARISH'
             result['overall_color'] = '#F44336'
         elif result['overall_score'] <= 45:
