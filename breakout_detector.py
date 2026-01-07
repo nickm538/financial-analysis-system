@@ -53,7 +53,7 @@ class BreakoutDetector:
     def __init__(self, twelvedata_api_key: str = None, finnhub_api_key: str = None):
         import os
         # Use provided key or fall back to environment variable
-        self.td_api_key = twelvedata_api_key or os.environ.get('TWELVEDATA_API_KEY', 'd2e5e6e2c1c74e77b0c4e0e8e9e0e1e2')
+        self.td_api_key = twelvedata_api_key or os.environ.get('TWELVEDATA_API_KEY', '5e7a5daaf41d46a8966963106ebef210')
         self.finnhub_api_key = finnhub_api_key or os.environ.get('FINNHUB_API_KEY')
         self.base_url = "https://api.twelvedata.com"
         
