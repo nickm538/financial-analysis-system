@@ -40,6 +40,13 @@ from dark_pool_scanner import DarkPoolScanner
 from composite_score import CompositeScoreEngine
 from macro_context import MacroContext
 
+# FinancialDatasets.ai integration
+try:
+    from financialdatasets_client import FinancialDatasetsClient
+    FINANCIALDATASETS_AVAILABLE = True
+except ImportError:
+    FINANCIALDATASETS_AVAILABLE = False
+
 # OpenAI client
 from openai import OpenAI
 
@@ -80,6 +87,7 @@ YOUR CAPABILITIES:
    - Oracle Scanner: Tim Bohen 5:1 setups, float analysis, catalyst detection
    - Composite Score: Multi-factor master score combining all signals
    - Macro Context: VIX sentiment, market breadth, sector rotation
+   - FinancialDatasets.ai: Premium financial metrics, company facts, news sentiment, SEC filings
 
 2. PATTERN RECOGNITION - Identify patterns humans miss:
    - Historical price pattern matching
@@ -163,6 +171,9 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
         self.dark_pool_scanner = DarkPoolScanner()
         self.composite_engine = CompositeScoreEngine()
         self.macro_context = MacroContext()
+        
+        # Initialize FinancialDatasets.ai client (premium data source)
+        self.fd_client = FinancialDatasetsClient() if FINANCIALDATASETS_AVAILABLE else None
         
         # Conversation history for context
         self.conversation_history = []
@@ -276,7 +287,28 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
         except Exception as e:
             analysis["engines"]["macro"] = {"status": "error", "error": str(e)}
         
-        # 6. Calculate Composite Score
+        # 6. FinancialDatasets.ai Premium Data (fills gaps and enhances accuracy)
+        if self.fd_client:
+            try:
+                # Get premium financial metrics
+                fd_metrics = self.fd_client.get_financial_metrics_snapshot(symbol)
+                if fd_metrics.get("status") == "success":
+                    analysis["engines"]["fd_metrics"] = fd_metrics
+                
+                # Get company facts
+                fd_company = self.fd_client.get_company_facts(symbol)
+                if fd_company.get("status") == "success":
+                    analysis["engines"]["fd_company"] = fd_company
+                
+                # Get news for catalyst detection
+                fd_news = self.fd_client.get_news(symbol, limit=5)
+                if fd_news.get("status") == "success":
+                    analysis["engines"]["fd_news"] = fd_news
+                    
+            except Exception as e:
+                analysis["engines"]["fd_data"] = {"status": "error", "error": str(e)}
+        
+        # 7. Calculate Composite Score
         try:
             composite = self.composite_engine.calculate_master_score(
                 options_data=analysis["engines"].get("options"),
@@ -429,6 +461,69 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
             sections.append(f"  Master Score: {comp.get('master_score', 'N/A')}/100")
             sections.append(f"  Signal: {comp.get('signal', 'N/A')}")
             sections.append(f"  Confidence: {comp.get('confidence', 'N/A')} ({comp.get('confidence_pct', 0)}%)")
+            sections.append("")
+        
+        # FinancialDatasets.ai Premium Data
+        if engines.get("fd_metrics", {}).get("status") == "success":
+            fd = engines["fd_metrics"]
+            sections.append("💎 PREMIUM FINANCIAL METRICS (FinancialDatasets.ai):")
+            
+            # Valuation
+            val = fd.get("valuation", {})
+            sections.append(f"  Market Cap: ${val.get('market_cap', 0)/1e9:.2f}B" if val.get('market_cap') else "  Market Cap: N/A")
+            sections.append(f"  P/E Ratio: {val.get('pe_ratio', 'N/A'):.2f}" if val.get('pe_ratio') else "  P/E Ratio: N/A")
+            sections.append(f"  PEG Ratio: {val.get('peg_ratio', 'N/A'):.2f}" if val.get('peg_ratio') else "  PEG Ratio: N/A")
+            sections.append(f"  EV/EBITDA: {val.get('ev_ebitda', 'N/A'):.2f}" if val.get('ev_ebitda') else "  EV/EBITDA: N/A")
+            sections.append(f"  FCF Yield: {val.get('fcf_yield', 0)*100:.2f}%" if val.get('fcf_yield') else "  FCF Yield: N/A")
+            
+            # Profitability
+            prof = fd.get("profitability", {})
+            sections.append(f"  Gross Margin: {prof.get('gross_margin', 0)*100:.1f}%" if prof.get('gross_margin') else "  Gross Margin: N/A")
+            sections.append(f"  Operating Margin: {prof.get('operating_margin', 0)*100:.1f}%" if prof.get('operating_margin') else "  Operating Margin: N/A")
+            sections.append(f"  Net Margin: {prof.get('net_margin', 0)*100:.1f}%" if prof.get('net_margin') else "  Net Margin: N/A")
+            sections.append(f"  ROE: {prof.get('roe', 0)*100:.1f}%" if prof.get('roe') else "  ROE: N/A")
+            sections.append(f"  ROIC: {prof.get('roic', 0)*100:.1f}%" if prof.get('roic') else "  ROIC: N/A")
+            
+            # Growth
+            growth = fd.get("growth", {})
+            sections.append(f"  Revenue Growth: {growth.get('revenue_growth', 0)*100:.1f}%" if growth.get('revenue_growth') else "  Revenue Growth: N/A")
+            sections.append(f"  Earnings Growth: {growth.get('earnings_growth', 0)*100:.1f}%" if growth.get('earnings_growth') else "  Earnings Growth: N/A")
+            sections.append(f"  EPS Growth: {growth.get('eps_growth', 0)*100:.1f}%" if growth.get('eps_growth') else "  EPS Growth: N/A")
+            sections.append(f"  FCF Growth: {growth.get('fcf_growth', 0)*100:.1f}%" if growth.get('fcf_growth') else "  FCF Growth: N/A")
+            
+            # Liquidity & Leverage
+            liq = fd.get("liquidity", {})
+            lev = fd.get("leverage", {})
+            sections.append(f"  Current Ratio: {liq.get('current_ratio', 'N/A'):.2f}" if liq.get('current_ratio') else "  Current Ratio: N/A")
+            sections.append(f"  Debt/Equity: {lev.get('debt_to_equity', 'N/A'):.2f}" if lev.get('debt_to_equity') else "  Debt/Equity: N/A")
+            sections.append("")
+        
+        # FinancialDatasets.ai News & Sentiment
+        if engines.get("fd_news", {}).get("status") == "success":
+            news = engines["fd_news"]
+            sections.append("📰 NEWS & CATALYST DETECTION (FinancialDatasets.ai):")
+            sections.append(f"  News Sentiment: {news.get('overall_sentiment', 'N/A')} (Score: {news.get('sentiment_score', 0)})")
+            sections.append(f"  Recent Articles: {news.get('count', 0)}")
+            dist = news.get("sentiment_distribution", {})
+            sections.append(f"  Sentiment Mix: +{dist.get('positive', 0)} / ~{dist.get('neutral', 0)} / -{dist.get('negative', 0)}")
+            
+            # Show top headlines
+            articles = news.get("articles", [])[:3]
+            if articles:
+                sections.append("  Recent Headlines:")
+                for art in articles:
+                    title = art.get('title', 'N/A')[:80]
+                    sections.append(f"    - {title}...")
+            sections.append("")
+        
+        # FinancialDatasets.ai Company Facts
+        if engines.get("fd_company", {}).get("status") == "success":
+            co = engines["fd_company"]
+            sections.append("🏢 COMPANY PROFILE (FinancialDatasets.ai):")
+            sections.append(f"  Name: {co.get('name', 'N/A')}")
+            sections.append(f"  Sector: {co.get('sector', 'N/A')} | Industry: {co.get('industry', 'N/A')}")
+            sections.append(f"  Employees: {co.get('employees', 'N/A'):,}" if co.get('employees') else "  Employees: N/A")
+            sections.append(f"  Exchange: {co.get('exchange', 'N/A')}")
             sections.append("")
         
         return "\n".join(sections)
