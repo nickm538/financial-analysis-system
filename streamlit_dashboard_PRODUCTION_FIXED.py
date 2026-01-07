@@ -3570,7 +3570,7 @@ if show_analysis:
                             with col1:
                                 st.metric("OBV Trend", obv['obv_trend'])
                             with col2:
-                                st.metric("Price Trend", obv['price_trend'])
+                                st.metric("Price Slope", f"{obv.get('price_slope', 0):.2f}")
                             with col3:
                                 st.metric("Divergence Strength", f"{obv['divergence_strength']}%")
                         
