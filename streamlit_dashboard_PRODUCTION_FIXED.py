@@ -77,16 +77,6 @@ try:
 except ImportError:
     SCORING_AVAILABLE = False
 
-# Import Sadie AI Chatbot
-SADIE_ERROR = None
-try:
-    from sadie_ai import SadieAI
-    sadie_ai = SadieAI()
-    SADIE_AVAILABLE = True
-except Exception as e:
-    SADIE_AVAILABLE = False
-    sadie_ai = None
-    SADIE_ERROR = str(e)
 
 # Page config
 st.set_page_config(
@@ -749,100 +739,6 @@ with st.expander("🌍 **QUICK ACCESS: Market Macro Context** (Click to expand)"
             - Extreme fear can also mean opportunity for contrarians
             """)
 
-# ===== SADIE AI CHATBOT QUICK ACCESS =====
-with st.expander("🤖 **QUICK ACCESS: SADIE AI Financial Advisor** (Click to expand)", expanded=False):
-    st.markdown("""
-    ### 🧠 Ask SADIE Anything About Stocks & Markets
-    SADIE (Supreme Analytical & Decision Intelligence Engine) is your AI-powered financial advisor 
-    with institutional-grade analysis powered by GPT.
-    """)
-    
-    # Educational intro
-    with st.expander("🎓 What can SADIE do?", expanded=False):
-        st.markdown("""
-        **SADIE integrates ALL our engines:**
-        - 💥 Breakout Detector (NR patterns, TTM Squeeze, OBV)
-        - 📊 Options Flow (Put/Call, unusual activity)
-        - 🏊 Dark Pool (institutional positioning)
-        - 🔮 Oracle Scanner (5:1 setups)
-        - 🏆 Composite Score (master rating)
-        - 🌍 Macro Context (VIX, breadth)
-        
-        **Ask things like:**
-        - "What do you think about AAPL?"
-        - "Should I buy NVDA here?"
-        - "What are the best breakout setups?"
-        - "Give me a trade idea with entry and stop"
-        """)
-    
-    # Initialize session state for Sadie on landing page
-    if 'sadie_landing_messages' not in st.session_state:
-        st.session_state.sadie_landing_messages = []
-    
-    # Check if Sadie is available
-    if SADIE_AVAILABLE and sadie_ai is not None:
-        # Chat input
-        sadie_input = st.text_input(
-            "💬 Ask SADIE:",
-            key="sadie_landing_input",
-            placeholder="e.g., 'What do you think about TSLA?' or 'Best setups today?'"
-        )
-        
-        col_ask, col_clear = st.columns([3, 1])
-        with col_ask:
-            ask_sadie = st.button("🪄 Ask SADIE", key="sadie_landing_ask", type="primary", use_container_width=True)
-        with col_clear:
-            if st.button("🗑️ Clear", key="sadie_landing_clear", use_container_width=True):
-                st.session_state.sadie_landing_messages = []
-                st.rerun()
-        
-        # Quick question buttons
-        st.markdown("**Quick Questions:**")
-        qcol1, qcol2, qcol3 = st.columns(3)
-        with qcol1:
-            if st.button("🔥 Best Setups", key="sadie_q1", use_container_width=True):
-                sadie_input = "What are the top 5 breakout setups in the market right now?"
-                ask_sadie = True
-        with qcol2:
-            if st.button("📈 Market Outlook", key="sadie_q2", use_container_width=True):
-                sadie_input = "What's your outlook on the overall market today? Bullish or cautious?"
-                ask_sadie = True
-        with qcol3:
-            if st.button("🎯 Trade Idea", key="sadie_q3", use_container_width=True):
-                sadie_input = "Give me your highest conviction trade idea right now with entry, target, and stop."
-                ask_sadie = True
-        
-        # Process question
-        if ask_sadie and sadie_input:
-            st.session_state.sadie_landing_messages.append({"role": "user", "content": sadie_input})
-            
-            with st.spinner("🤖 SADIE is thinking deeply..."):
-                try:
-                    response = sadie_ai.chat(sadie_input, include_scan=True)
-                    if response.get('status') == 'success':
-                        st.session_state.sadie_landing_messages.append({
-                            "role": "assistant", 
-                            "content": response.get('response', 'No response generated.')
-                        })
-                    else:
-                        st.error(f"Error: {response.get('error', 'Unknown error')}")
-                except Exception as e:
-                    st.error(f"Error: {e}")
-            st.rerun()
-        
-        # Display conversation
-        if st.session_state.sadie_landing_messages:
-            st.markdown("---")
-            for msg in st.session_state.sadie_landing_messages[-6:]:  # Show last 3 exchanges
-                if msg['role'] == 'user':
-                    st.markdown(f"**🧑 You:** {msg['content']}")
-                else:
-                    st.markdown(f"**🤖 SADIE:** {msg['content']}")
-                st.markdown("---")
-    else:
-        error_msg = SADIE_ERROR if SADIE_ERROR else "Unknown error"
-        st.warning(f"⚠️ SADIE AI unavailable: {error_msg}")
-        st.info("💡 **To enable SADIE:** Add `OPENAI_API_KEY` to your Railway environment variables and redeploy.")
 
 st.markdown("---")
 
@@ -884,7 +780,7 @@ if show_analysis:
         """, unsafe_allow_html=True)
 
         # Tabs
-        tab0, tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab_sadie = st.tabs([
+        tab0, tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
             "🏆 MASTER SCORE",
             "🎯 AI Summary",
             "📊 Comprehensive Fundamentals",
@@ -894,8 +790,7 @@ if show_analysis:
             "🔮 Oracle Scanner",
             "📊 Options Pressure",
             "🏊 Dark Pool",
-            "💥 Breakout Detector",
-            "🤖 SADIE AI"
+            "💥 Breakout Detector"
         ])
 
         # Get all cached data with error handling
@@ -3743,199 +3638,6 @@ if show_analysis:
             else:
                 st.error("❌ Breakout Detector module not available")
 
-        # ==================== TAB SADIE: AI FINANCIAL CHATBOT ====================
-        with tab_sadie:
-            st.markdown("### 🤖 SADIE - Supreme Analytical & Decision Intelligence Engine")
-            st.markdown("*Your AI-powered financial advisor with institutional-grade analysis*")
-            
-            # Initialize session state for chat
-            if 'sadie_messages' not in st.session_state:
-                st.session_state.sadie_messages = []
-            if 'sadie_context_ticker' not in st.session_state:
-                st.session_state.sadie_context_ticker = ticker
-            
-            # Educational intro
-            with st.expander("🎓 **ABOUT SADIE - Your AI Trading Expert**", expanded=False):
-                st.markdown("""
-                #### What is SADIE?
-                
-                SADIE (Supreme Analytical & Decision Intelligence Engine) is an **institutional-grade AI financial advisor** 
-                powered by GPT-5's advanced reasoning capabilities combined with all our proprietary trading engines.
-                
-                #### SADIE's Capabilities:
-                
-                | Engine | What It Analyzes |
-                |--------|------------------|
-                | **Breakout Detector** | NR4/NR7 patterns, TTM Squeeze, OBV divergence, S/R levels |
-                | **Options Flow** | Put/Call ratio, net pressure, unusual activity |
-                | **Dark Pool Scanner** | Institutional positioning, short volume, stealth accumulation |
-                | **Oracle Scanner** | Tim Bohen 5:1 setups, float analysis, catalysts |
-                | **Composite Score** | Multi-factor master score combining all signals |
-                | **Macro Context** | VIX sentiment, market breadth, sector rotation |
-                
-                #### How to Use SADIE:
-                
-                1. **Ask about any stock**: "What do you think about AAPL?" or "Analyze $NVDA"
-                2. **Get specific advice**: "Should I buy TSLA here?" or "What's the risk/reward on MSFT?"
-                3. **Market scans**: "What are the best breakout setups right now?"
-                4. **Strategy questions**: "How should I play earnings on AMZN?"
-                5. **Education**: "Explain TTM Squeeze" or "What does high dark pool activity mean?"
-                
-                #### SADIE's Philosophy:
-                
-                - **Medium Risk, Maximum Profitability** - Targeting 2:1+ reward/risk setups
-                - **Data-Driven** - Every recommendation backed by real-time data
-                - **Transparent** - Always explains the reasoning and risks
-                - **Actionable** - Specific entry, target, and stop levels
-                
-                > 💡 **Pro Tip**: The more specific your question, the better SADIE's analysis!
-                """)
-            
-            # Check if Sadie is available
-            if SADIE_AVAILABLE and sadie_ai is not None:
-                # Quick Analysis Card for current ticker
-                st.markdown(f"#### 📊 Quick Analysis: {ticker}")
-                
-                try:
-                    quick_analysis = sadie_ai.get_quick_analysis(ticker)
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        price = quick_analysis.get('price', 'N/A')
-                        change = quick_analysis.get('change_1d', 0)
-                        st.metric("Price", f"${price}" if price else "N/A", f"{change:+.2f}%" if change else None)
-                    with col2:
-                        score = quick_analysis.get('breakout_score', 'N/A')
-                        st.metric("Breakout Score", f"{score}/100" if score else "N/A")
-                    with col3:
-                        prob = quick_analysis.get('breakout_probability', 'N/A')
-                        st.metric("Probability", prob)
-                    with col4:
-                        direction = quick_analysis.get('direction', 'N/A')
-                        st.metric("Direction", direction)
-                    
-                    # Show active signals
-                    signals = quick_analysis.get('signals', [])
-                    if signals:
-                        st.markdown(f"**Active Signals:** {', '.join(signals[:5])}")
-                except Exception as e:
-                    st.warning(f"Quick analysis unavailable: {e}")
-                
-                st.markdown("---")
-                
-                # Chat Interface
-                st.markdown("#### 💬 Chat with SADIE")
-                
-                # Display chat history
-                chat_container = st.container()
-                with chat_container:
-                    for msg in st.session_state.sadie_messages:
-                        if msg['role'] == 'user':
-                            st.markdown(f"""
-                            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-                                        padding: 15px; border-radius: 10px; margin: 10px 0;
-                                        border-left: 4px solid #00d4ff;">
-                                <strong>🧑 You:</strong><br>{msg['content']}
-                            </div>
-                            """, unsafe_allow_html=True)
-                        else:
-                            st.markdown(f"""
-                            <div style="background: linear-gradient(135deg, #0f3460 0%, #16213e 100%); 
-                                        padding: 15px; border-radius: 10px; margin: 10px 0;
-                                        border-left: 4px solid #00ff88;">
-                                <strong>🤖 SADIE:</strong><br>{msg['content']}
-                            </div>
-                            """, unsafe_allow_html=True)
-                
-                # Input area
-                col_input, col_btn = st.columns([5, 1])
-                with col_input:
-                    user_input = st.text_input(
-                        "Ask SADIE anything about stocks, markets, or trading strategies...",
-                        key="sadie_input",
-                        placeholder=f"e.g., 'What do you think about {ticker}?' or 'Best breakout setups today?'"
-                    )
-                with col_btn:
-                    send_btn = st.button("🚀 Ask", use_container_width=True)
-                
-                # Quick action buttons
-                st.markdown("**Quick Actions:**")
-                col_q1, col_q2, col_q3, col_q4 = st.columns(4)
-                with col_q1:
-                    if st.button(f"📊 Analyze {ticker}", use_container_width=True):
-                        user_input = f"Give me a comprehensive analysis of {ticker} with entry, target, and stop levels."
-                        send_btn = True
-                with col_q2:
-                    if st.button("🔥 Best Setups", use_container_width=True):
-                        user_input = "What are the top 5 breakout setups in the market right now?"
-                        send_btn = True
-                with col_q3:
-                    if st.button("📈 Market Outlook", use_container_width=True):
-                        user_input = "What's your outlook on the overall market? Should I be bullish or cautious?"
-                        send_btn = True
-                with col_q4:
-                    if st.button("🎯 Trade Idea", use_container_width=True):
-                        user_input = f"Give me your highest conviction trade idea for {ticker} with specific entry, target, and stop."
-                        send_btn = True
-                
-                # Process input
-                if send_btn and user_input:
-                    # Add user message to history
-                    st.session_state.sadie_messages.append({
-                        'role': 'user',
-                        'content': user_input
-                    })
-                    
-                    # Get SADIE's response
-                    with st.spinner("🤖 SADIE is analyzing... (using GPT-5 thinking mode)"):
-                        try:
-                            response = sadie_ai.chat(user_input, include_scan=True)
-                            
-                            if response.get('status') == 'success':
-                                assistant_response = response.get('response', 'I apologize, but I could not generate a response.')
-                                
-                                # Add assistant message to history
-                                st.session_state.sadie_messages.append({
-                                    'role': 'assistant',
-                                    'content': assistant_response
-                                })
-                                
-                                # Show metadata
-                                st.caption(f"Model: {response.get('model', 'N/A')} | Thinking: {response.get('thinking_mode', 'N/A')} | Symbols: {', '.join(response.get('symbols_analyzed', []))}")
-                            else:
-                                st.error(f"Error: {response.get('error', 'Unknown error')}")
-                                
-                        except Exception as e:
-                            st.error(f"Error communicating with SADIE: {e}")
-                    
-                    # Rerun to update chat display
-                    st.rerun()
-                
-                # Clear chat button
-                if st.button("🗑️ Clear Chat History"):
-                    st.session_state.sadie_messages = []
-                    if sadie_ai:
-                        sadie_ai.clear_history()
-                    st.rerun()
-                
-                # Footer
-                st.markdown("---")
-                st.markdown("""
-                <div style="text-align: center; color: #888; font-size: 12px;">
-                    ⚠️ <strong>Disclaimer:</strong> SADIE provides analysis and educational content only. 
-                    Always do your own research and consult a financial advisor before making investment decisions.
-                    Past performance does not guarantee future results.
-                </div>
-                """, unsafe_allow_html=True)
-                
-            else:
-                st.error("❌ SADIE AI module not available. Please check OpenAI API configuration.")
-                st.info("""
-                **To enable SADIE:**
-                1. Ensure `OPENAI_API_KEY` environment variable is set
-                2. Ensure `sadie_ai.py` module is in the project directory
-                3. Restart the application
-                """)
 
 else:
     # Welcome screen
