@@ -2922,53 +2922,22 @@ if show_analysis:
                     sentiment = pressure_data['sentiment']
                     sentiment_color = pressure_data['sentiment_color']
                     
-                    # Custom HTML pressure bar
-                    st.markdown(f"""
-                    <div style="background: #1a1a2e; padding: 20px; border-radius: 15px; margin: 10px 0;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                            <span style="color: #F44336; font-weight: bold; font-size: 1.1em;">🐻 BEARISH</span>
-                            <span style="color: {sentiment_color}; font-weight: bold; font-size: 1.3em;">{sentiment}</span>
-                            <span style="color: #00c851; font-weight: bold; font-size: 1.1em;">BULLISH 🐂</span>
-                        </div>
-                        
-                        <div style="background: #2d2d2d; border-radius: 10px; height: 50px; position: relative; overflow: hidden;">
-                            <!-- Center line -->
-                            <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #fff; z-index: 2;"></div>
-                            
-                            <!-- Pressure fill -->
-                            <div style="
-                                position: absolute;
-                                left: {min(pressure_bar, 50)}%;
-                                width: {abs(pressure_bar - 50)}%;
-                                height: 100%;
-                                background: linear-gradient(90deg, {'#F44336' if net_pressure < 0 else '#2d2d2d'}, {sentiment_color});
-                                border-radius: 5px;
-                                transition: all 0.5s ease;
-                            "></div>
-                            
-                            <!-- Pressure indicator ball -->
-                            <div style="
-                                position: absolute;
-                                left: {pressure_bar}%;
-                                top: 50%;
-                                transform: translate(-50%, -50%);
-                                width: 30px;
-                                height: 30px;
-                                background: {sentiment_color};
-                                border-radius: 50%;
-                                border: 4px solid white;
-                                z-index: 3;
-                                box-shadow: 0 0 15px {sentiment_color};
-                            "></div>
-                        </div>
-                        
-                        <div style="display: flex; justify-content: space-between; margin-top: 10px; color: #888;">
-                            <span>0</span>
-                            <span style="color: {sentiment_color}; font-weight: bold; font-size: 1.2em;">Net Pressure: {net_pressure:+.1f}%</span>
-                            <span>100</span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # Simplified pressure display using Streamlit native components
+                    col_bear, col_sent, col_bull = st.columns([1, 2, 1])
+                    with col_bear:
+                        st.markdown("🐻 **BEARISH**")
+                    with col_sent:
+                        st.markdown(f"<h2 style='text-align: center; color: {sentiment_color};'>{sentiment}</h2>", unsafe_allow_html=True)
+                    with col_bull:
+                        st.markdown("**BULLISH** 🐂")
+                    
+                    # Progress bar for pressure (0-100 scale)
+                    st.progress(int(pressure_bar) / 100)
+                    
+                    # Net pressure display
+                    pressure_emoji = "🟢" if net_pressure > 20 else "🔴" if net_pressure < -20 else "⚪"
+                    st.markdown(f"### {pressure_emoji} Net Pressure: **{net_pressure:+.1f}%**")
+                    st.caption("← Bearish (0) | Neutral (50) | Bullish (100) →")
                     
                     st.markdown("---")
                     
