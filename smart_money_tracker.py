@@ -27,6 +27,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import subprocess
+import yfinance as yf
 
 # Add Manus API client path
 sys.path.append('/opt/.manus/.sandbox-runtime')
@@ -345,8 +346,59 @@ class SmartMoneyTracker:
                             result["signal_strength"] = 30
                             
         except Exception as e:
-            result["status"] = "error"
-            result["error"] = str(e)
+            pass  # Will try yfinance fallback
+        
+        # Fallback to yfinance if no data yet
+        if not result["insiders"]:
+            try:
+                ticker = yf.Ticker(symbol)
+                # Get insider transactions
+                insider_txns = ticker.insider_transactions
+                if insider_txns is not None and not insider_txns.empty:
+                    buys = 0
+                    sells = 0
+                    for _, row in insider_txns.head(20).iterrows():
+                        txn = {
+                            "insider": row.get('Insider', 'Unknown'),
+                            "type": row.get('Transaction', 'Unknown'),
+                            "shares": row.get('Shares', 0),
+                            "value": row.get('Value', 0),
+                            "date": str(row.get('Start Date', 'N/A'))
+                        }
+                        result["recent_transactions"].append(txn)
+                        
+                        txn_type = str(row.get('Transaction', '')).lower()
+                        if 'buy' in txn_type or 'purchase' in txn_type:
+                            buys += 1
+                        elif 'sale' in txn_type or 'sell' in txn_type:
+                            sells += 1
+                    
+                    result["summary"] = {
+                        "total_transactions": len(result["recent_transactions"]),
+                        "recent_buys": buys,
+                        "recent_sells": sells,
+                        "net_activity": buys - sells
+                    }
+                    
+                    # Generate signal
+                    if buys >= 3 and buys > sells:
+                        result["signal"] = "BULLISH"
+                        result["signal_strength"] = min(100, buys * 25)
+                        result["insight"] = "CLUSTER BUYING detected via yfinance"
+                    elif buys > sells:
+                        result["signal"] = "SLIGHTLY BULLISH"
+                        result["signal_strength"] = 40
+                    elif sells >= 3 and sells > buys:
+                        result["signal"] = "BEARISH"
+                        result["signal_strength"] = min(100, sells * 20)
+                        result["insight"] = "CLUSTER SELLING detected via yfinance"
+                    elif sells > buys:
+                        result["signal"] = "SLIGHTLY BEARISH"
+                        result["signal_strength"] = 30
+                        
+                    result["data_source"] = "yfinance"
+            except Exception as e:
+                result["error"] = str(e)
         
         self._set_cache(cache_key, result)
         return result
@@ -436,8 +488,44 @@ class SmartMoneyTracker:
                                 result["signal_strength"] = 40
                                 
         except Exception as e:
-            result["status"] = "error"
-            result["error"] = str(e)
+            pass  # Will try yfinance fallback
+        
+        # Fallback to yfinance if no data yet
+        if not result["top_holders"]:
+            try:
+                ticker = yf.Ticker(symbol)
+                
+                # Get institutional holders
+                inst_holders = ticker.institutional_holders
+                if inst_holders is not None and not inst_holders.empty:
+                    for _, row in inst_holders.head(10).iterrows():
+                        result["top_holders"].append({
+                            "name": row.get('Holder', 'Unknown'),
+                            "shares": row.get('Shares', 0),
+                            "value": row.get('Value', 0),
+                            "pct_held": row.get('% Out', 0) * 100 if row.get('% Out') else 0,
+                            "date_reported": str(row.get('Date Reported', 'N/A'))
+                        })
+                    
+                    result["summary"] = {
+                        "institutional_count": len(inst_holders),
+                        "top_10_shares": inst_holders['Shares'].head(10).sum() if 'Shares' in inst_holders.columns else 0
+                    }
+                    
+                    # Signal based on institutional ownership
+                    if len(inst_holders) > 500:
+                        result["signal"] = "HIGH INSTITUTIONAL INTEREST"
+                        result["signal_strength"] = 70
+                    elif len(inst_holders) > 100:
+                        result["signal"] = "MODERATE INSTITUTIONAL INTEREST"
+                        result["signal_strength"] = 50
+                    else:
+                        result["signal"] = "LOW INSTITUTIONAL INTEREST"
+                        result["signal_strength"] = 30
+                    
+                    result["data_source"] = "yfinance"
+            except Exception as e:
+                result["error"] = str(e)
         
         self._set_cache(cache_key, result)
         return result

@@ -36,6 +36,7 @@ from datetime import datetime, timedelta
 import requests
 from typing import Dict, List, Optional, Tuple
 import time
+import yfinance as yf
 
 
 class BreakoutDetector:
@@ -58,7 +59,21 @@ class BreakoutDetector:
         self.base_url = "https://api.twelvedata.com"
         
     def _fetch_price_data(self, symbol: str, interval: str = "1day", outputsize: int = 100) -> Optional[pd.DataFrame]:
-        """Fetch OHLCV data from TwelveData - REAL DATA ONLY"""
+        """
+        Fetch OHLCV data with TwelveData primary + yfinance fallback.
+        This ensures maximum data reliability and coverage.
+        """
+        # Try TwelveData first (more granular intervals available)
+        df = self._fetch_twelvedata(symbol, interval, outputsize)
+        
+        # Fallback to yfinance if TwelveData fails
+        if df is None or df.empty:
+            df = self._fetch_yfinance(symbol, outputsize)
+        
+        return df
+    
+    def _fetch_twelvedata(self, symbol: str, interval: str = "1day", outputsize: int = 100) -> Optional[pd.DataFrame]:
+        """Fetch from TwelveData API."""
         try:
             url = f"{self.base_url}/time_series"
             params = {
@@ -85,7 +100,40 @@ class BreakoutDetector:
             return df
             
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            return None
+    
+    def _fetch_yfinance(self, symbol: str, outputsize: int = 100) -> Optional[pd.DataFrame]:
+        """
+        Fetch from yfinance as fallback - FREE, RELIABLE, REAL-TIME.
+        No API key required, no rate limits.
+        """
+        try:
+            ticker = yf.Ticker(symbol)
+            # Get enough history for analysis
+            period = "6mo" if outputsize > 60 else "3mo"
+            hist = ticker.history(period=period)
+            
+            if hist.empty:
+                return None
+            
+            # Rename columns to match expected format
+            df = hist.reset_index()
+            df.columns = [c.lower() for c in df.columns]
+            df = df.rename(columns={"date": "datetime"})
+            
+            # Ensure datetime is proper format
+            df["datetime"] = pd.to_datetime(df["datetime"])
+            
+            # Keep only needed columns
+            df = df[["datetime", "open", "high", "low", "close", "volume"]].copy()
+            
+            # Take last N rows
+            if len(df) > outputsize:
+                df = df.tail(outputsize).reset_index(drop=True)
+            
+            return df
+            
+        except Exception as e:
             return None
     
     # =========================================================================
