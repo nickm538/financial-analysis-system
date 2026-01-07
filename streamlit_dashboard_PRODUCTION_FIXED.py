@@ -3608,7 +3608,7 @@ if show_analysis:
                             st.markdown(vol['interpretation'])
                             col1, col2, col3 = st.columns(3)
                             with col1:
-                                st.metric("Volume Ratio", f"{vol['volume_ratio']:.2f}x")
+                                st.metric("Relative Volume", f"{vol.get('relative_volume', 100):.1f}%")
                             with col2:
                                 st.metric("Current Vol", f"{vol['current_volume']:,}")
                             with col3:
