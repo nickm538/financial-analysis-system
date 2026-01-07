@@ -47,6 +47,13 @@ try:
 except ImportError:
     FINANCIALDATASETS_AVAILABLE = False
 
+# Smart Money Tracker integration
+try:
+    from smart_money_tracker import SmartMoneyTracker
+    SMART_MONEY_AVAILABLE = True
+except ImportError:
+    SMART_MONEY_AVAILABLE = False
+
 # OpenAI client
 from openai import OpenAI
 
@@ -88,6 +95,7 @@ YOUR CAPABILITIES:
    - Composite Score: Multi-factor master score combining all signals
    - Macro Context: VIX sentiment, market breadth, sector rotation
    - FinancialDatasets.ai: Premium financial metrics, company facts, news sentiment, SEC filings
+   - Smart Money Tracker: Congress trades, insider transactions, institutional holdings, dark pool flow
 
 2. PATTERN RECOGNITION - Identify patterns humans miss:
    - Historical price pattern matching
@@ -174,6 +182,9 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
         
         # Initialize FinancialDatasets.ai client (premium data source)
         self.fd_client = FinancialDatasetsClient() if FINANCIALDATASETS_AVAILABLE else None
+        
+        # Initialize Smart Money Tracker (Congress, Insider, Institutional, Dark Pool)
+        self.smart_money = SmartMoneyTracker() if SMART_MONEY_AVAILABLE else None
         
         # Conversation history for context
         self.conversation_history = []
@@ -308,7 +319,16 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
             except Exception as e:
                 analysis["engines"]["fd_data"] = {"status": "error", "error": str(e)}
         
-        # 7. Calculate Composite Score
+        # 7. Smart Money Tracker (Congress, Insider, Institutional, Dark Pool)
+        if self.smart_money:
+            try:
+                smart_money_data = self.smart_money.get_comprehensive_analysis(symbol)
+                if smart_money_data.get("status") == "success":
+                    analysis["engines"]["smart_money"] = smart_money_data
+            except Exception as e:
+                analysis["engines"]["smart_money"] = {"status": "error", "error": str(e)}
+        
+        # 8. Calculate Composite Score
         try:
             composite = self.composite_engine.calculate_master_score(
                 options_data=analysis["engines"].get("options"),
@@ -524,6 +544,64 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
             sections.append(f"  Sector: {co.get('sector', 'N/A')} | Industry: {co.get('industry', 'N/A')}")
             sections.append(f"  Employees: {co.get('employees', 'N/A'):,}" if co.get('employees') else "  Employees: N/A")
             sections.append(f"  Exchange: {co.get('exchange', 'N/A')}")
+            sections.append("")
+        
+        # Smart Money Tracker (Congress, Insider, Institutional, Dark Pool)
+        if engines.get("smart_money", {}).get("status") == "success":
+            sm = engines["smart_money"]
+            sections.append("💰 SMART MONEY TRACKER:")
+            sections.append(f"  Overall Signal: {sm.get('overall_signal', 'N/A')}")
+            sections.append(f"  Smart Money Score: {sm.get('overall_score', 50)}/100")
+            sections.append(f"  Confidence: {sm.get('confidence', 'N/A')}")
+            
+            # Congress Trading
+            congress = sm.get("components", {}).get("congress", {})
+            if congress.get("status") == "success":
+                sections.append(f"  Congress Activity: {congress.get('signal', 'N/A')} (Buys: {congress.get('summary', {}).get('buy_count', 0)}, Sells: {congress.get('summary', {}).get('sell_count', 0)})")
+            
+            # Insider Trading
+            insider = sm.get("components", {}).get("insider", {})
+            if insider.get("status") == "success":
+                sections.append(f"  Insider Activity: {insider.get('signal', 'N/A')} (Recent Buys: {insider.get('summary', {}).get('recent_buys', 0)}, Sells: {insider.get('summary', {}).get('recent_sells', 0)})")
+                if insider.get("insight"):
+                    sections.append(f"    ⚠️ {insider.get('insight')}")
+            
+            # Institutional Holdings
+            inst = sm.get("components", {}).get("institutional", {})
+            if inst.get("status") == "success":
+                sections.append(f"  Institutional: {inst.get('signal', 'N/A')} ({inst.get('summary', {}).get('institutional_count', 0)} institutions)")
+            
+            # Dark Pool
+            dp = sm.get("components", {}).get("dark_pool", {})
+            if dp.get("status") in ["success", "partial"]:
+                sections.append(f"  Dark Pool: {dp.get('signal', 'N/A')} ({dp.get('dark_pool_pct', 0):.1f}% off-exchange)")
+                if dp.get("interpretation"):
+                    sections.append(f"    🔍 {dp.get('interpretation')}")
+            
+            # Unusual Options
+            opts = sm.get("components", {}).get("options", {})
+            if opts.get("status") in ["success", "partial"]:
+                sections.append(f"  Options Flow: {opts.get('signal', 'N/A')} (P/C Ratio: {opts.get('put_call_ratio', 1.0):.2f})")
+                for activity in opts.get("unusual_activity", [])[:2]:
+                    sections.append(f"    🚨 {activity.get('description', '')}")
+            
+            # Key Insights
+            insights = sm.get("key_insights", [])
+            if insights:
+                sections.append("  KEY INSIGHTS:")
+                for insight in insights[:3]:
+                    sections.append(f"    ✅ {insight}")
+            
+            # Risk Factors
+            risks = sm.get("risk_factors", [])
+            if risks:
+                sections.append("  RISK FACTORS:")
+                for risk in risks[:3]:
+                    sections.append(f"    ⚠️ {risk}")
+            
+            # Recommendation
+            if sm.get("recommendation"):
+                sections.append(f"  RECOMMENDATION: {sm.get('recommendation')}")
             sections.append("")
         
         return "\n".join(sections)
