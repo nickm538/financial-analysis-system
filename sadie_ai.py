@@ -175,9 +175,16 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
 
     def __init__(self):
         """Initialize Sadie with all financial engines and OpenAI client."""
+        # Get API key from environment
+        api_key = os.environ.get('OPENAI_API_KEY')
+        
+        # Validate API key exists
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable not set")
+        
         # Initialize OpenAI client
         self.client = OpenAI(
-            api_key=os.environ.get('OPENAI_API_KEY'),
+            api_key=api_key,
             base_url=os.environ.get('OPENAI_API_BASE', 'https://api.openai.com/v1')
         )
         

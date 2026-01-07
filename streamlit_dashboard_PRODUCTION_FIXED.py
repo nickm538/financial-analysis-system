@@ -78,6 +78,7 @@ except ImportError:
     SCORING_AVAILABLE = False
 
 # Import Sadie AI Chatbot
+SADIE_ERROR = None
 try:
     from sadie_ai import SadieAI
     sadie_ai = SadieAI()
@@ -85,6 +86,7 @@ try:
 except Exception as e:
     SADIE_AVAILABLE = False
     sadie_ai = None
+    SADIE_ERROR = str(e)
 
 # Page config
 st.set_page_config(
@@ -838,7 +840,9 @@ with st.expander("🤖 **QUICK ACCESS: SADIE AI Financial Advisor** (Click to ex
                     st.markdown(f"**🤖 SADIE:** {msg['content']}")
                 st.markdown("---")
     else:
-        st.warning("⚠️ SADIE AI requires OpenAI API key. Add OPENAI_API_KEY to environment variables.")
+        error_msg = SADIE_ERROR if SADIE_ERROR else "Unknown error"
+        st.warning(f"⚠️ SADIE AI unavailable: {error_msg}")
+        st.info("💡 **To enable SADIE:** Add `OPENAI_API_KEY` to your Railway environment variables and redeploy.")
 
 st.markdown("---")
 
