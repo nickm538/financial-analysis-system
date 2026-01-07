@@ -15,6 +15,7 @@ from typing import Dict, Optional, Union, Any
 from datetime import datetime
 import time
 import json
+import yfinance as yf
 
 class ComprehensiveFundamentals:
     """Multi-API comprehensive fundamental analysis with robust data extraction"""
@@ -67,14 +68,16 @@ class ComprehensiveFundamentals:
         massive_data = self._fetch_massive_financials(ticker)
         finnhub_data = self._fetch_finnhub_metrics(ticker)
         av_data = self._fetch_alphavantage_data(ticker)
+        yf_data = self._fetch_yfinance_data(ticker)  # NEW: yfinance fallback
         
         # Debug: Print what we got from each API
         print(f"\n   📊 API Response Summary:")
         print(f"      Massive API: {len(massive_data) if massive_data else 0} fields")
         print(f"      Finnhub API: {len(finnhub_data) if finnhub_data else 0} fields")
         print(f"      AlphaVantage: {len(av_data) if av_data else 0} fields")
+        print(f"      yfinance: {len(yf_data) if yf_data else 0} fields")
         
-        metrics = self._calculate_all_metrics(massive_data, finnhub_data, av_data, ticker)
+        metrics = self._calculate_all_metrics(massive_data, finnhub_data, av_data, ticker, yf_data)
         
         print(f"✅ Calculated {len(metrics)} fundamental metrics for {ticker}\n")
         return metrics
@@ -167,7 +170,74 @@ class ComprehensiveFundamentals:
         """Wrapper for AlphaVantage client"""
         return self.alphavantage.get_comprehensive_data(ticker)
 
-    def _calculate_all_metrics(self, massive_data, finnhub_data, av_data, ticker) -> Dict:
+    def _fetch_yfinance_data(self, ticker: str) -> Dict:
+        """Fetch comprehensive data from yfinance as fallback - FREE, no rate limits"""
+        try:
+            print(f"   🔍 yfinance: Fetching data for {ticker}...")
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            
+            # Extract key metrics
+            data = {
+                # Cash Flow
+                'free_cash_flow': info.get('freeCashflow', 0),
+                'operating_cash_flow': info.get('operatingCashflow', 0),
+                'total_cash': info.get('totalCash', 0),
+                'total_debt': info.get('totalDebt', 0),
+                
+                # Valuation
+                'market_cap': info.get('marketCap', 0),
+                'enterprise_value': info.get('enterpriseValue', 0),
+                'trailing_pe': info.get('trailingPE', 0),
+                'forward_pe': info.get('forwardPE', 0),
+                'peg_ratio': info.get('pegRatio', 0),
+                'price_to_book': info.get('priceToBook', 0),
+                'price_to_sales': info.get('priceToSalesTrailing12Months', 0),
+                'ev_to_ebitda': info.get('enterpriseToEbitda', 0),
+                'ev_to_revenue': info.get('enterpriseToRevenue', 0),
+                
+                # Profitability
+                'profit_margin': info.get('profitMargins', 0),
+                'operating_margin': info.get('operatingMargins', 0),
+                'gross_margin': info.get('grossMargins', 0),
+                'return_on_equity': info.get('returnOnEquity', 0),
+                'return_on_assets': info.get('returnOnAssets', 0),
+                
+                # Growth
+                'revenue_growth': info.get('revenueGrowth', 0),
+                'earnings_growth': info.get('earningsGrowth', 0),
+                'earnings_quarterly_growth': info.get('earningsQuarterlyGrowth', 0),
+                
+                # Per Share
+                'eps_trailing': info.get('trailingEps', 0),
+                'eps_forward': info.get('forwardEps', 0),
+                'book_value': info.get('bookValue', 0),
+                'revenue_per_share': info.get('revenuePerShare', 0),
+                
+                # Balance Sheet
+                'total_assets': info.get('totalAssets', 0),
+                'total_equity': info.get('totalStockholderEquity', 0),
+                'current_ratio': info.get('currentRatio', 0),
+                'quick_ratio': info.get('quickRatio', 0),
+                'debt_to_equity': info.get('debtToEquity', 0),
+                
+                # Other
+                'shares_outstanding': info.get('sharesOutstanding', 0),
+                'revenue': info.get('totalRevenue', 0),
+                'ebitda': info.get('ebitda', 0),
+                'net_income': info.get('netIncomeToCommon', 0),
+            }
+            
+            # Count non-zero values
+            non_zero = sum(1 for v in data.values() if v and v != 0)
+            print(f"   ✅ yfinance: {non_zero} non-zero metrics fetched")
+            return data
+            
+        except Exception as e:
+            print(f"   ⚠️ yfinance Error: {e}")
+            return {}
+
+    def _calculate_all_metrics(self, massive_data, finnhub_data, av_data, ticker, yf_data=None) -> Dict:
         """
         Calculate all fundamental metrics with proper formulations.
         Uses multiple fallback sources for each metric.
@@ -176,6 +246,7 @@ class ComprehensiveFundamentals:
         finnhub_data = finnhub_data or {}
         av_data = av_data or {}
         massive_data = massive_data or {}
+        yf_data = yf_data or {}  # NEW: yfinance fallback
         
         # ========== VALUATION METRICS ==========
         
@@ -185,9 +256,13 @@ class ComprehensiveFundamentals:
             metrics['pe_ratio'] = self._safe_float(finnhub_data.get('peBasicExclExtraTTM', 0))
         if metrics['pe_ratio'] == 0:
             metrics['pe_ratio'] = self._safe_float(finnhub_data.get('peTTM', 0))
+        if metrics['pe_ratio'] == 0:  # yfinance fallback
+            metrics['pe_ratio'] = self._safe_float(yf_data.get('trailing_pe', 0))
         
         # Forward P/E
         metrics['forward_pe'] = self._safe_float(av_data.get('forward_pe', 0))
+        if metrics['forward_pe'] == 0:  # yfinance fallback
+            metrics['forward_pe'] = self._safe_float(yf_data.get('forward_pe', 0))
         if metrics['forward_pe'] == 0:
             metrics['forward_pe'] = self._safe_float(finnhub_data.get('peNormalizedAnnual', 0))
         
@@ -272,6 +347,28 @@ class ComprehensiveFundamentals:
         metrics['gross_margin'] = self._safe_float(finnhub_data.get('grossMarginTTM', 0))
         if metrics['gross_margin'] == 0:
             metrics['gross_margin'] = self._safe_float(finnhub_data.get('grossMarginAnnual', 0))
+        if metrics['gross_margin'] == 0:  # yfinance fallback (returns as decimal)
+            yf_gross = self._safe_float(yf_data.get('gross_margin', 0))
+            if yf_gross > 0:
+                metrics['gross_margin'] = yf_gross * 100 if yf_gross < 1 else yf_gross
+        
+        # yfinance fallbacks for other profitability metrics
+        if metrics['net_margin'] == 0:
+            yf_profit = self._safe_float(yf_data.get('profit_margin', 0))
+            if yf_profit > 0:
+                metrics['net_margin'] = yf_profit * 100 if yf_profit < 1 else yf_profit
+        if metrics['operating_margin'] == 0:
+            yf_op = self._safe_float(yf_data.get('operating_margin', 0))
+            if yf_op > 0:
+                metrics['operating_margin'] = yf_op * 100 if yf_op < 1 else yf_op
+        if metrics['roe'] == 0:
+            yf_roe = self._safe_float(yf_data.get('return_on_equity', 0))
+            if yf_roe > 0:
+                metrics['roe'] = yf_roe * 100 if yf_roe < 1 else yf_roe
+        if metrics['roa'] == 0:
+            yf_roa = self._safe_float(yf_data.get('return_on_assets', 0))
+            if yf_roa > 0:
+                metrics['roa'] = yf_roa * 100 if yf_roa < 1 else yf_roa
         
         # ========== LIQUIDITY METRICS ==========
         
@@ -287,6 +384,9 @@ class ComprehensiveFundamentals:
             current_liabilities = self._safe_float(massive_data.get('current_liabilities', 0))
             if current_liabilities > 0:
                 metrics['current_ratio'] = current_assets / current_liabilities
+        # yfinance fallback
+        if metrics['current_ratio'] == 0:
+            metrics['current_ratio'] = self._safe_float(yf_data.get('current_ratio', 0))
         
         # Quick Ratio = (Current Assets - Inventory) / Current Liabilities
         metrics['quick_ratio'] = self._safe_float(finnhub_data.get('quickRatioTTM', 0))
@@ -301,6 +401,9 @@ class ComprehensiveFundamentals:
             current_liabilities = self._safe_float(massive_data.get('current_liabilities', 0))
             if current_liabilities > 0:
                 metrics['quick_ratio'] = (current_assets - inventory) / current_liabilities
+        # yfinance fallback
+        if metrics['quick_ratio'] == 0:
+            metrics['quick_ratio'] = self._safe_float(yf_data.get('quick_ratio', 0))
         
         # Cash Ratio = Cash / Current Liabilities
         metrics['cash_ratio'] = self._safe_float(finnhub_data.get('cashRatioTTM', 0))
@@ -439,6 +542,12 @@ class ComprehensiveFundamentals:
         if metrics['operating_cash_flow'] == 0:
             metrics['operating_cash_flow'] = self._safe_float(av_data.get('operatingCashflow', 0))
         
+        # Try yfinance (FREE, reliable for cash flow)
+        if metrics['operating_cash_flow'] == 0:
+            metrics['operating_cash_flow'] = self._safe_float(yf_data.get('operating_cash_flow', 0))
+            if metrics['operating_cash_flow'] != 0:
+                print(f"   ✅ yfinance: Operating CF = ${metrics['operating_cash_flow']:,.0f}")
+        
         # ACCURATE CALCULATION: Indirect Method (CFA Institute Standard)
         # Operating CF = Net Income + D&A + ΔWorking Capital + Non-Cash Items
         if metrics['operating_cash_flow'] == 0:
@@ -492,7 +601,12 @@ class ComprehensiveFundamentals:
         # Free Cash Flow = Operating Cash Flow - CapEx (TTM)
         # FCF is the most important cash flow metric for valuation
         
-        # Try Finnhub first (most reliable for TTM)
+        # Try yfinance first (most reliable and FREE)
+        metrics['free_cash_flow'] = self._safe_float(yf_data.get('free_cash_flow', 0))
+        if metrics['free_cash_flow'] != 0:
+            print(f"   ✅ yfinance: Free Cash Flow = ${metrics['free_cash_flow']:,.0f}")
+        
+        # Try Finnhub (most reliable for TTM)
         capex = self._safe_float(finnhub_data.get('capitalExpenditureTTM', 0))
         
         # Try Massive API
@@ -539,22 +653,30 @@ class ComprehensiveFundamentals:
         # Store CapEx in metrics
         metrics['capex'] = abs(capex)
         
-        # Calculate Free Cash Flow
-        if metrics['operating_cash_flow'] > 0:
-            metrics['free_cash_flow'] = metrics['operating_cash_flow'] - abs(capex)
-            
-            # Validation: FCF should be reasonable
-            fcf_margin = (metrics['free_cash_flow'] / metrics['revenue'] * 100) if metrics['revenue'] > 0 else 0
-            
-            if fcf_margin < -20 or fcf_margin > 50:
-                print(f"   ⚠️ WARNING: FCF Margin = {fcf_margin:.1f}% (unusual, verify CapEx)")
+        # Calculate Free Cash Flow (only if yfinance didn't already provide it)
+        if metrics['free_cash_flow'] == 0:
+            if metrics['operating_cash_flow'] > 0:
+                metrics['free_cash_flow'] = metrics['operating_cash_flow'] - abs(capex)
+                
+                # Validation: FCF should be reasonable
+                fcf_margin = (metrics['free_cash_flow'] / metrics['revenue'] * 100) if metrics['revenue'] > 0 else 0
+                
+                if fcf_margin < -20 or fcf_margin > 50:
+                    print(f"   ⚠️ WARNING: FCF Margin = {fcf_margin:.1f}% (unusual, verify CapEx)")
+                else:
+                    print(f"   ✅ Free CF: ${metrics['free_cash_flow']:,.0f} (FCF Margin: {fcf_margin:.1f}%)")
+                
+                print(f"      Operating CF: ${metrics['operating_cash_flow']:,.0f}, CapEx: ${capex:,.0f}")
             else:
-                print(f"   ✅ Free CF: ${metrics['free_cash_flow']:,.0f} (FCF Margin: {fcf_margin:.1f}%)")
-            
-            print(f"      Operating CF: ${metrics['operating_cash_flow']:,.0f}, CapEx: ${capex:,.0f}")
+                print(f"   ⚠️ WARNING: Cannot calculate FCF (Operating CF = 0)")
         else:
+            # FCF already provided by yfinance, just validate
+            fcf_margin = (metrics['free_cash_flow'] / metrics['revenue'] * 100) if metrics['revenue'] > 0 else 0
+            print(f"   ✅ Free CF (yfinance): ${metrics['free_cash_flow']:,.0f} (FCF Margin: {fcf_margin:.1f}%)")
+        
+        # Ensure FCF is set (shouldn't be None)
+        if metrics.get('free_cash_flow') is None:
             metrics['free_cash_flow'] = 0.0
-            print(f"   ⚠️ WARNING: Cannot calculate FCF (Operating CF = 0)")
         
         # Operating CF Ratio = Operating Cash Flow / Current Liabilities
         # Measures ability to cover short-term obligations with operating cash
