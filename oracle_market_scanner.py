@@ -90,7 +90,39 @@ class OracleMarketScanner:
         
         # 5:1 reward-risk parameters
         self.reward_risk_ratio = 5.0
-        self.atr_multiplier_stop = 1.5  # Stop loss = 1.5x ATR below entry
+        self.atr_multiplier_base = 1.2  # Base stop loss = 1.2x ATR below entry
+        
+    def _calculate_dynamic_atr_multiplier(self, current_atr: float, avg_atr_20: float, price: float) -> float:
+        """
+        Calculate dynamic ATR multiplier based on current volatility regime.
+        
+        Tim Bohen's approach: Tighter stops in high volatility (to limit risk),
+        wider stops in low volatility (to avoid noise).
+        
+        Args:
+            current_atr: Current ATR value
+            avg_atr_20: 20-period average ATR
+            price: Current stock price
+            
+        Returns:
+            ATR multiplier for stop loss calculation (1.0 to 1.5)
+        """
+        if avg_atr_20 <= 0:
+            return self.atr_multiplier_base
+        
+        volatility_ratio = current_atr / avg_atr_20
+        
+        # High volatility regime (ATR > 1.5x average)
+        if volatility_ratio > 1.5:
+            return 1.0  # Tighter stop to limit risk in volatile conditions
+        
+        # Low volatility regime (ATR < 0.7x average)
+        elif volatility_ratio < 0.7:
+            return 1.5  # Wider stop to avoid getting stopped out by noise
+        
+        # Normal volatility
+        else:
+            return self.atr_multiplier_base  # Standard 1.2x
         
     def _get_stock_universe(self) -> List[str]:
         """
@@ -282,12 +314,19 @@ class OracleMarketScanner:
             
             atr = np.mean(tr[-14:]) if len(tr) >= 14 else np.mean(tr)
             
+            # Calculate 20-period average ATR for volatility regime detection
+            atr_20 = np.mean(tr[-20:]) if len(tr) >= 20 else np.mean(tr)
+            
             # Calculate support/resistance from recent price action
             recent_low = hist['Low'].tail(20).min()
             recent_high = hist['High'].tail(20).max()
             
-            # Calculate 5:1 setup
-            stop_loss = current_price - (atr * self.atr_multiplier_stop)
+            # Calculate DYNAMIC ATR multiplier based on volatility regime
+            # Tim Bohen: Tighter stops in high vol, wider in low vol
+            atr_multiplier = self._calculate_dynamic_atr_multiplier(atr, atr_20, current_price)
+            
+            # Calculate 5:1 setup with dynamic stop
+            stop_loss = current_price - (atr * atr_multiplier)
             risk = current_price - stop_loss
             target = current_price + (risk * self.reward_risk_ratio)
             

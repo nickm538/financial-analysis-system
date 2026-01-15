@@ -70,8 +70,14 @@ class TTMSqueeze:
         self.bb_period = 20      # Bollinger Bands period
         self.bb_std = 2.0        # Bollinger Bands standard deviation multiplier
         self.kc_period = 20      # Keltner Channel period
-        self.kc_atr_mult = 1.5   # Keltner Channel ATR multiplier
+        self.kc_atr_mult = 1.5   # Keltner Channel ATR multiplier (standard squeeze)
+        self.kc_atr_mult_tight = 1.0  # Tight squeeze detection (more compression)
         self.momentum_period = 12  # Linear regression period for momentum
+        
+        # Squeeze intensity thresholds (BB width / KC width ratio)
+        self.squeeze_intensity_extreme = 0.5   # Very tight compression
+        self.squeeze_intensity_high = 0.7      # High compression
+        self.squeeze_intensity_moderate = 0.85 # Moderate compression
         
     def _fetch_price_data(self, symbol: str, interval: str = '1day', outputsize: int = 100) -> Optional[List[Dict]]:
         """
@@ -378,6 +384,30 @@ class TTMSqueeze:
         latest_bar = price_data[-1]
         current_price = float(latest_bar['close'])
         
+        # Calculate squeeze intensity (how tight is the compression)
+        bb_width_val = (bb_upper[idx] - bb_lower[idx]) if bb_upper[idx] and bb_lower[idx] else 0
+        kc_width_val = (kc_upper[idx] - kc_lower[idx]) if kc_upper[idx] and kc_lower[idx] else 0
+        
+        squeeze_intensity = 'NONE'
+        squeeze_intensity_ratio = 0
+        if kc_width_val > 0 and current_squeeze:
+            squeeze_intensity_ratio = bb_width_val / kc_width_val
+            if squeeze_intensity_ratio < self.squeeze_intensity_extreme:
+                squeeze_intensity = 'EXTREME'  # Very tight - explosive move likely
+            elif squeeze_intensity_ratio < self.squeeze_intensity_high:
+                squeeze_intensity = 'HIGH'  # High compression
+            elif squeeze_intensity_ratio < self.squeeze_intensity_moderate:
+                squeeze_intensity = 'MODERATE'  # Moderate compression
+            else:
+                squeeze_intensity = 'LOW'  # Mild compression
+        
+        # Calculate tight squeeze (using 1.0x ATR Keltner)
+        kc_upper_tight = kc_ema[idx] + (self.kc_atr_mult_tight * atr[idx]) if kc_ema[idx] and atr[idx] else None
+        kc_lower_tight = kc_ema[idx] - (self.kc_atr_mult_tight * atr[idx]) if kc_ema[idx] and atr[idx] else None
+        tight_squeeze = False
+        if kc_upper_tight and kc_lower_tight and bb_upper[idx] and bb_lower[idx]:
+            tight_squeeze = bb_lower[idx] > kc_lower_tight and bb_upper[idx] < kc_upper_tight
+        
         result = {
             'status': 'success',
             'symbol': symbol,
@@ -391,6 +421,11 @@ class TTMSqueeze:
             'squeeze_count': squeeze_count,
             'momentum': round(current_momentum, 4) if current_momentum else None,
             'momentum_color': momentum_color,
+            
+            # NEW: Squeeze intensity metrics
+            'squeeze_intensity': squeeze_intensity,
+            'squeeze_intensity_ratio': round(squeeze_intensity_ratio, 3) if squeeze_intensity_ratio else None,
+            'tight_squeeze': tight_squeeze,  # Using 1.0x ATR Keltner
             
             # Signal interpretation
             'signal': signal,

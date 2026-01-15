@@ -139,7 +139,7 @@ class BreakoutDetector:
     # =========================================================================
     # SIGNAL 1: NR4/NR7 PATTERN DETECTION (Toby Crabel)
     # =========================================================================
-    def detect_nr_patterns(self, df: pd.DataFrame) -> Dict:
+    def detect_nr_patterns(self, df: pd.DataFrame, gap_threshold: float = 0.02) -> Dict:
         """
         Detect NR4 (Narrowest Range in 4 days) and NR7 (Narrowest Range in 7 days)
         
@@ -154,14 +154,28 @@ class BreakoutDetector:
         - 70%+ of NR7 days lead to significant moves within 3 days
         
         PRO TIP: NR7 inside an NR4 (NR7+NR4 combo) is the most powerful signal.
+        
+        ENHANCEMENT: Gap filter - Gap days (>2% gap) invalidate NR patterns
+        because the volatility already released through the gap.
+        
+        Args:
+            df: Price DataFrame with OHLCV
+            gap_threshold: Gap percentage to invalidate NR (default 2%)
         """
         if df is None or len(df) < 7:
-            return {"nr4": False, "nr7": False, "range_percentile": 0, "signal_strength": "NONE"}
+            return {"nr4": False, "nr7": False, "range_percentile": 0, "signal_strength": "NONE", "gap_invalidated": False}
         
         # Calculate daily ranges
         df = df.copy()
         df["range"] = df["high"] - df["low"]
         df["range_pct"] = (df["range"] / df["close"]) * 100
+        
+        # Calculate gaps (open vs previous close)
+        df["gap"] = abs(df["open"] - df["close"].shift(1)) / df["close"].shift(1)
+        df["is_gap"] = df["gap"] > gap_threshold
+        
+        # Check if today is a gap day - invalidates NR pattern
+        gap_invalidated = df["is_gap"].iloc[-1] if len(df) > 1 else False
         
         latest_range = df["range"].iloc[-1]
         
@@ -208,6 +222,12 @@ class BreakoutDetector:
         else:
             signal_strength = "NONE"
         
+        # If gap day, invalidate NR pattern (volatility already released)
+        if gap_invalidated:
+            nr4 = False
+            nr7 = False
+            signal_strength = "NONE"
+        
         return {
             "nr4": nr4,
             "nr7": nr7,
@@ -218,10 +238,13 @@ class BreakoutDetector:
             "avg_range": round(avg_range, 4),
             "consecutive_narrow_days": narrow_days,
             "signal_strength": signal_strength,
-            "interpretation": self._interpret_nr_pattern(nr4, nr7, narrow_days, range_percentile)
+            "gap_invalidated": gap_invalidated,  # NEW: Gap filter flag
+            "interpretation": self._interpret_nr_pattern(nr4, nr7, narrow_days, range_percentile, gap_invalidated)
         }
     
-    def _interpret_nr_pattern(self, nr4: bool, nr7: bool, narrow_days: int, range_pct: float) -> str:
+    def _interpret_nr_pattern(self, nr4: bool, nr7: bool, narrow_days: int, range_pct: float, gap_invalidated: bool = False) -> str:
+        if gap_invalidated:
+            return "⚠️ GAP DAY - NR pattern invalidated. Volatility already released through gap opening."
         if nr7 and nr4:
             return "🔥 NR7+NR4 COMBO - Extremely rare! Maximum energy compression. Explosive move imminent within 1-2 days."
         elif nr7:
