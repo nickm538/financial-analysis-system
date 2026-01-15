@@ -526,18 +526,22 @@ class OracleMarketScanner:
         print(f"5:1 Setups found: {len(five_to_one_setups)}")
         
         # Add date/time context
-        now = datetime.now()
-        market_open = now.replace(hour=9, minute=30, second=0)
-        market_close = now.replace(hour=16, minute=0, second=0)
+        # ALWAYS USE EASTERN TIME for market context
+        import pytz
+        et = pytz.timezone('US/Eastern')
+        now = datetime.now(et)
+        
+        market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
         is_market_hours = market_open <= now <= market_close and now.weekday() < 5
         
         # Determine trading session
-        if now < market_open:
+        if now.weekday() >= 5:
+            session = 'WEEKEND'
+        elif now < market_open:
             session = 'PRE_MARKET'
         elif now > market_close:
             session = 'AFTER_HOURS'
-        elif now.weekday() >= 5:
-            session = 'WEEKEND'
         else:
             if now < now.replace(hour=10, minute=30):
                 session = 'OPENING_VOLATILITY'
@@ -550,7 +554,7 @@ class OracleMarketScanner:
         
         return {
             'status': 'success',
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': now.isoformat(),
             'scan_duration_seconds': duration,
             'stocks_scanned': scanned,
             'stocks_meeting_criteria': len(results),
@@ -561,7 +565,7 @@ class OracleMarketScanner:
             'market_context': {
                 'is_market_hours': is_market_hours,
                 'trading_session': session,
-                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S ET'),
                 'day_of_week': now.strftime('%A'),
             },
             'criteria': {
@@ -599,18 +603,21 @@ class OracleMarketScanner:
         
         five_to_one = [r for r in results if r['meets_5_to_1']]
         
-        # Add date/time context for production accuracy
-        now = datetime.now()
-        market_open = now.replace(hour=9, minute=30, second=0)
-        market_close = now.replace(hour=16, minute=0, second=0)
+        # Add date/time context for production accuracy - ALWAYS USE EASTERN TIME
+        import pytz
+        et = pytz.timezone('US/Eastern')
+        now = datetime.now(et)
+        
+        market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
         is_market_hours = market_open <= now <= market_close and now.weekday() < 5
         
-        if now < market_open:
+        if now.weekday() >= 5:
+            session = 'WEEKEND'
+        elif now < market_open:
             session = 'PRE_MARKET'
         elif now > market_close:
             session = 'AFTER_HOURS'
-        elif now.weekday() >= 5:
-            session = 'WEEKEND'
         else:
             if now < now.replace(hour=10, minute=30):
                 session = 'OPENING_VOLATILITY'
@@ -623,7 +630,7 @@ class OracleMarketScanner:
         
         return {
             'status': 'success',
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': now.isoformat(),
             'stocks_scanned': len(tickers),
             'results': results,
             'five_to_one_setups': five_to_one,
@@ -631,7 +638,7 @@ class OracleMarketScanner:
             'market_context': {
                 'is_market_hours': is_market_hours,
                 'trading_session': session,
-                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S ET'),
                 'day_of_week': now.strftime('%A'),
                 'dynamic_universe_size': len(tickers)
             }

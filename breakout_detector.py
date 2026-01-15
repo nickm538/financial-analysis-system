@@ -1393,19 +1393,23 @@ class BreakoutDetector:
         if result["status"] == "success":
             result["all_results"] = result["all_results"][:top_n]
             
-            # Add date/time context
+            # Add date/time context - ALWAYS USE EASTERN TIME
             from datetime import datetime
-            now = datetime.now()
-            market_open = now.replace(hour=9, minute=30, second=0)
-            market_close = now.replace(hour=16, minute=0, second=0)
+            import pytz
+            
+            et = pytz.timezone('US/Eastern')
+            now = datetime.now(et)
+            
+            market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+            market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
             is_market_hours = market_open <= now <= market_close and now.weekday() < 5
             
-            if now < market_open:
+            if now.weekday() >= 5:
+                session = 'WEEKEND'
+            elif now < market_open:
                 session = 'PRE_MARKET'
             elif now > market_close:
                 session = 'AFTER_HOURS'
-            elif now.weekday() >= 5:
-                session = 'WEEKEND'
             else:
                 if now < now.replace(hour=10, minute=30):
                     session = 'OPENING_VOLATILITY'
@@ -1419,7 +1423,7 @@ class BreakoutDetector:
             result["market_context"] = {
                 'is_market_hours': is_market_hours,
                 'trading_session': session,
-                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S ET'),
                 'day_of_week': now.strftime('%A'),
                 'dynamic_tickers_added': len(dynamic_tickers),
                 'total_universe': len(all_symbols)
