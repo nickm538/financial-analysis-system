@@ -1283,10 +1283,46 @@ class BreakoutDetector:
             "scan_summary": f"Found {len(very_high)} VERY HIGH, {len(high)} HIGH, {len(moderate)} MODERATE probability setups"
         }
     
+    def _get_dynamic_universe(self) -> List[str]:
+        """
+        Get dynamic stock universe from real-time market data.
+        No predefined restrictions - scans what's actually moving TODAY.
+        """
+        import requests
+        from bs4 import BeautifulSoup
+        
+        dynamic_tickers = set()
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        
+        # Get TODAY'S most active, gainers, losers from Yahoo Finance
+        try:
+            for url in [
+                "https://finance.yahoo.com/most-active",
+                "https://finance.yahoo.com/gainers",
+                "https://finance.yahoo.com/losers",
+                "https://finance.yahoo.com/trending-tickers"
+            ]:
+                resp = requests.get(url, headers=headers, timeout=10)
+                soup = BeautifulSoup(resp.text, 'html.parser')
+                for link in soup.find_all('a', href=True):
+                    href = link['href']
+                    if '/quote/' in href and '?' not in href:
+                        ticker = href.split('/quote/')[1].split('/')[0].split('?')[0]
+                        if ticker.isalpha() and len(ticker) <= 5:
+                            dynamic_tickers.add(ticker)
+        except:
+            pass
+        
+        return list(dynamic_tickers)
+    
     def quick_scan(self, top_n: int = 20) -> Dict:
         """
-        Quick scan of top 125 stocks and ETFs for breakout setups.
+        Quick scan of 125+ stocks and ETFs for breakout setups.
+        Combines predefined universe with DYNAMIC real-time discovery.
         """
+        # Get dynamic tickers from today's market activity
+        dynamic_tickers = self._get_dynamic_universe()
+        
         quick_symbols = [
             # === MEGA CAP TECH (10) ===
             "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "AVGO", "ORCL", "ADBE",
@@ -1322,10 +1358,45 @@ class BreakoutDetector:
             "GLD", "SLV",
         ]
         
-        result = self.scan_market(quick_symbols, min_score=30)
+        # Combine predefined with dynamic discovery (no duplicates)
+        all_symbols = list(set(quick_symbols + dynamic_tickers))
+        
+        result = self.scan_market(all_symbols, min_score=30)
         
         if result["status"] == "success":
             result["all_results"] = result["all_results"][:top_n]
+            
+            # Add date/time context
+            from datetime import datetime
+            now = datetime.now()
+            market_open = now.replace(hour=9, minute=30, second=0)
+            market_close = now.replace(hour=16, minute=0, second=0)
+            is_market_hours = market_open <= now <= market_close and now.weekday() < 5
+            
+            if now < market_open:
+                session = 'PRE_MARKET'
+            elif now > market_close:
+                session = 'AFTER_HOURS'
+            elif now.weekday() >= 5:
+                session = 'WEEKEND'
+            else:
+                if now < now.replace(hour=10, minute=30):
+                    session = 'OPENING_VOLATILITY'
+                elif now < now.replace(hour=12, minute=0):
+                    session = 'MORNING_MOMENTUM'
+                elif now < now.replace(hour=14, minute=0):
+                    session = 'MIDDAY_CONSOLIDATION'
+                else:
+                    session = 'POWER_HOUR'
+            
+            result["market_context"] = {
+                'is_market_hours': is_market_hours,
+                'trading_session': session,
+                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'day_of_week': now.strftime('%A'),
+                'dynamic_tickers_added': len(dynamic_tickers),
+                'total_universe': len(all_symbols)
+            }
             
         return result
 

@@ -24,13 +24,126 @@ class MacroContext:
     """
     Analyzes macro-level factors that affect individual stock performance.
     Provides context that technical analysis alone cannot capture.
+    
+    PRODUCTION-GRADE: All data is real-time with active date/time context.
     """
     
     def __init__(self, finnhub_api_key: str = None):
         self.finnhub_key = finnhub_api_key
         self.cache = {}
         self.cache_time = None
-        self.cache_ttl = 300  # 5 minutes
+        self.cache_ttl = 180  # 3 minutes - shorter for more real-time data
+    
+    def _get_market_session_context(self) -> Dict:
+        """
+        Get precise market session context with date/time awareness.
+        This context is applied to EVERY scan for production accuracy.
+        """
+        from datetime import datetime
+        import pytz
+        
+        try:
+            et = pytz.timezone('US/Eastern')
+            now = datetime.now(et)
+        except:
+            now = datetime.now()
+        
+        market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
+        premarket_start = now.replace(hour=4, minute=0, second=0, microsecond=0)
+        afterhours_end = now.replace(hour=20, minute=0, second=0, microsecond=0)
+        
+        is_weekday = now.weekday() < 5
+        is_market_hours = market_open <= now <= market_close and is_weekday
+        is_premarket = premarket_start <= now < market_open and is_weekday
+        is_afterhours = market_close < now <= afterhours_end and is_weekday
+        
+        # Determine trading session with granularity
+        if not is_weekday:
+            session = 'WEEKEND'
+            session_detail = 'Markets closed - weekend'
+        elif is_premarket:
+            session = 'PRE_MARKET'
+            session_detail = f'Pre-market trading ({now.strftime("%H:%M")} ET)'
+        elif is_afterhours:
+            session = 'AFTER_HOURS'
+            session_detail = f'After-hours trading ({now.strftime("%H:%M")} ET)'
+        elif now < market_open:
+            session = 'PRE_OPEN'
+            session_detail = f'Before pre-market ({now.strftime("%H:%M")} ET)'
+        elif now > afterhours_end:
+            session = 'CLOSED'
+            session_detail = 'Markets closed for the day'
+        else:
+            # During market hours - granular session
+            if now < now.replace(hour=10, minute=0):
+                session = 'OPENING_30'
+                session_detail = 'First 30 minutes - HIGH volatility expected'
+            elif now < now.replace(hour=10, minute=30):
+                session = 'OPENING_HOUR'
+                session_detail = 'Opening hour - Elevated volatility'
+            elif now < now.replace(hour=12, minute=0):
+                session = 'MORNING_MOMENTUM'
+                session_detail = 'Morning momentum session'
+            elif now < now.replace(hour=14, minute=0):
+                session = 'MIDDAY_LULL'
+                session_detail = 'Midday consolidation - Lower volume typical'
+            elif now < now.replace(hour=15, minute=0):
+                session = 'AFTERNOON_SETUP'
+                session_detail = 'Afternoon setup - Watch for breakouts'
+            else:
+                session = 'POWER_HOUR'
+                session_detail = 'POWER HOUR - High volume, institutional activity'
+        
+        # Special day awareness
+        day_of_month = now.day
+        day_of_week = now.weekday()
+        month = now.month
+        
+        special_notes = []
+        
+        # Triple witching (3rd Friday of March, June, Sept, Dec)
+        if month in [3, 6, 9, 12] and day_of_week == 4 and 15 <= day_of_month <= 21:
+            special_notes.append('⚠️ TRIPLE WITCHING - Extreme volume and volatility expected')
+        
+        # Monthly options expiration (3rd Friday)
+        if day_of_week == 4 and 15 <= day_of_month <= 21:
+            special_notes.append('📅 Monthly OPEX - Options expiration day')
+        
+        # Weekly options expiration (every Friday)
+        if day_of_week == 4:
+            special_notes.append('📅 Weekly options expiration')
+        
+        # First trading day of month
+        if day_of_month <= 3 and day_of_week == 0:
+            special_notes.append('📅 First trading day of month - Institutional rebalancing')
+        
+        # Jobs report (first Friday)
+        if day_of_week == 4 and day_of_month <= 7:
+            special_notes.append('📊 Jobs Report Day - NFP release 8:30 AM ET')
+        
+        # CPI week (typically mid-month)
+        if 10 <= day_of_month <= 15:
+            special_notes.append('📊 CPI Week - Inflation data may impact markets')
+        
+        # End of quarter
+        if month in [3, 6, 9, 12] and day_of_month >= 25:
+            special_notes.append('📅 End of Quarter - Window dressing, rebalancing')
+        
+        return {
+            'timestamp': now.strftime('%Y-%m-%d %H:%M:%S ET'),
+            'date': now.strftime('%Y-%m-%d'),
+            'time': now.strftime('%H:%M:%S'),
+            'day_of_week': now.strftime('%A'),
+            'is_market_hours': is_market_hours,
+            'is_premarket': is_premarket,
+            'is_afterhours': is_afterhours,
+            'session': session,
+            'session_detail': session_detail,
+            'special_notes': special_notes,
+            'minutes_to_open': max(0, int((market_open - now).total_seconds() / 60)) if now < market_open else 0,
+            'minutes_to_close': max(0, int((market_close - now).total_seconds() / 60)) if now < market_close else 0
+        }
         
     def _get_cached_or_fetch(self, key: str, fetch_func):
         """Simple caching mechanism"""
@@ -447,11 +560,15 @@ class MacroContext:
     def get_full_macro_context(self, symbol: str = None) -> Dict:
         """
         Get comprehensive macro context for trading decisions.
+        PRODUCTION-GRADE: Includes active date/time context on every call.
         """
         result = {
             "timestamp": datetime.now().isoformat(),
             "status": "success"
         }
+        
+        # CRITICAL: Add market session context to EVERY scan
+        result["market_session"] = self._get_market_session_context()
         
         # VIX Analysis
         result["vix"] = self.get_vix_analysis()

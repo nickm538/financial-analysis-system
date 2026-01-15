@@ -468,6 +468,20 @@ with st.expander("🚀 **QUICK ACCESS: Full Market 5:1 Scanner** (Click to expan
     if 'quick_scan_results' in st.session_state and st.session_state['quick_scan_results']:
         results = st.session_state['quick_scan_results']
         
+        # Display market context prominently
+        if 'market_context' in results:
+            ctx = results['market_context']
+            ctx_col1, ctx_col2, ctx_col3 = st.columns(3)
+            with ctx_col1:
+                st.metric("📅 Scan Time", ctx.get('scan_time', 'N/A'))
+            with ctx_col2:
+                session = ctx.get('trading_session', 'UNKNOWN')
+                session_emoji = '🔔' if session in ['OPENING_VOLATILITY', 'POWER_HOUR'] else '📊'
+                st.metric(f"{session_emoji} Session", session.replace('_', ' '))
+            with ctx_col3:
+                universe = ctx.get('dynamic_universe_size', 'N/A')
+                st.metric("🌐 Universe Scanned", f"{universe} stocks")
+        
         st.success(f"✅ Found {results['five_to_one_count']} stocks with 5:1 setups!")
         
         if results['five_to_one_setups']:
@@ -553,6 +567,20 @@ with st.expander("💥 **QUICK ACCESS: Breakout Detector Scanner** (Click to exp
         bo_results = st.session_state['quick_breakout_results']
         
         if bo_results['status'] == 'success':
+            # Display market context prominently
+            if 'market_context' in bo_results:
+                ctx = bo_results['market_context']
+                ctx_col1, ctx_col2, ctx_col3 = st.columns(3)
+                with ctx_col1:
+                    st.metric("📅 Scan Time", ctx.get('scan_time', 'N/A'))
+                with ctx_col2:
+                    session = ctx.get('trading_session', 'UNKNOWN')
+                    session_emoji = '🔔' if session in ['OPENING_VOLATILITY', 'POWER_HOUR'] else '📊'
+                    st.metric(f"{session_emoji} Session", session.replace('_', ' '))
+                with ctx_col3:
+                    universe = ctx.get('total_universe', ctx.get('dynamic_tickers_added', 'N/A'))
+                    st.metric("🌐 Universe Scanned", f"{universe} stocks")
+            
             st.success(f"✅ {bo_results['scan_summary']}")
             
             # Very High Probability Setups
@@ -675,6 +703,28 @@ with st.expander("🌍 **QUICK ACCESS: Market Macro Context** (Click to expand)"
     # Display macro results
     if 'quick_macro_results' in st.session_state and st.session_state['quick_macro_results']:
         macro_data = st.session_state['quick_macro_results']
+        
+        # Display market session context prominently
+        if 'market_session' in macro_data:
+            session = macro_data['market_session']
+            ctx_col1, ctx_col2, ctx_col3, ctx_col4 = st.columns(4)
+            with ctx_col1:
+                st.metric("📅 Date", session.get('date', 'N/A'))
+            with ctx_col2:
+                st.metric("⏰ Time (ET)", session.get('time', 'N/A'))
+            with ctx_col3:
+                trading_session = session.get('session', 'UNKNOWN')
+                session_emoji = '🔔' if trading_session in ['OPENING_30', 'POWER_HOUR'] else '📊'
+                st.metric(f"{session_emoji} Session", trading_session.replace('_', ' '))
+            with ctx_col4:
+                is_open = '✅ OPEN' if session.get('is_market_hours') else '❌ CLOSED'
+                st.metric("🏦 Market", is_open)
+            
+            # Display session detail and special notes
+            st.info(f"📊 {session.get('session_detail', '')}")
+            if session.get('special_notes'):
+                for note in session['special_notes']:
+                    st.warning(note)
         
         # Overall Risk
         risk_color = "🟢" if macro_data['overall_risk'] == "LOW" else ("🟡" if macro_data['overall_risk'] == "MODERATE" else "🔴")

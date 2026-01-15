@@ -97,11 +97,71 @@ class OracleMarketScanner:
         Get list of all tradeable stocks from major exchanges.
         
         Returns a comprehensive list of tickers to scan.
+        DYNAMIC DISCOVERY - No predefined restrictions on cap size or sector.
         """
-        print("📊 Building stock universe...")
+        print("📊 Building DYNAMIC stock universe (real-time discovery)...")
+        print(f"   Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
         # Use a combination of sources for comprehensive coverage
         tickers = set()
+        
+        # Method 0: Get TODAY'S most active, gainers, losers from Yahoo Finance (DYNAMIC)
+        try:
+            import requests
+            from bs4 import BeautifulSoup
+            
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            
+            # Most Active Today
+            most_active_url = "https://finance.yahoo.com/most-active"
+            resp = requests.get(most_active_url, headers=headers, timeout=10)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if '/quote/' in href and '?' not in href:
+                    ticker = href.split('/quote/')[1].split('/')[0].split('?')[0]
+                    if ticker.isalpha() and len(ticker) <= 5:
+                        tickers.add(ticker)
+            print(f"   ✅ Added today's most active stocks")
+            
+            # Day Gainers
+            gainers_url = "https://finance.yahoo.com/gainers"
+            resp = requests.get(gainers_url, headers=headers, timeout=10)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if '/quote/' in href and '?' not in href:
+                    ticker = href.split('/quote/')[1].split('/')[0].split('?')[0]
+                    if ticker.isalpha() and len(ticker) <= 5:
+                        tickers.add(ticker)
+            print(f"   ✅ Added today's top gainers")
+            
+            # Day Losers (potential bounce plays)
+            losers_url = "https://finance.yahoo.com/losers"
+            resp = requests.get(losers_url, headers=headers, timeout=10)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if '/quote/' in href and '?' not in href:
+                    ticker = href.split('/quote/')[1].split('/')[0].split('?')[0]
+                    if ticker.isalpha() and len(ticker) <= 5:
+                        tickers.add(ticker)
+            print(f"   ✅ Added today's top losers (bounce candidates)")
+            
+            # Trending Tickers
+            trending_url = "https://finance.yahoo.com/trending-tickers"
+            resp = requests.get(trending_url, headers=headers, timeout=10)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if '/quote/' in href and '?' not in href:
+                    ticker = href.split('/quote/')[1].split('/')[0].split('?')[0]
+                    if ticker.isalpha() and len(ticker) <= 5:
+                        tickers.add(ticker)
+            print(f"   ✅ Added trending tickers")
+            
+        except Exception as e:
+            print(f"   ⚠️ Dynamic discovery partial: {e}")
         
         # Method 1: Get S&P 500 + Russell 2000 components via Wikipedia
         try:
@@ -465,6 +525,29 @@ class OracleMarketScanner:
         print(f"Stocks meeting criteria: {len(results)}")
         print(f"5:1 Setups found: {len(five_to_one_setups)}")
         
+        # Add date/time context
+        now = datetime.now()
+        market_open = now.replace(hour=9, minute=30, second=0)
+        market_close = now.replace(hour=16, minute=0, second=0)
+        is_market_hours = market_open <= now <= market_close and now.weekday() < 5
+        
+        # Determine trading session
+        if now < market_open:
+            session = 'PRE_MARKET'
+        elif now > market_close:
+            session = 'AFTER_HOURS'
+        elif now.weekday() >= 5:
+            session = 'WEEKEND'
+        else:
+            if now < now.replace(hour=10, minute=30):
+                session = 'OPENING_VOLATILITY'
+            elif now < now.replace(hour=12, minute=0):
+                session = 'MORNING_MOMENTUM'
+            elif now < now.replace(hour=14, minute=0):
+                session = 'MIDDAY_CONSOLIDATION'
+            else:
+                session = 'POWER_HOUR'
+        
         return {
             'status': 'success',
             'timestamp': datetime.now().isoformat(),
@@ -475,6 +558,12 @@ class OracleMarketScanner:
             'top_results': top_results,
             'five_to_one_setups': top_5_to_1,
             'data_source': 'Yahoo Finance (Real-time)',
+            'market_context': {
+                'is_market_hours': is_market_hours,
+                'trading_session': session,
+                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'day_of_week': now.strftime('%A'),
+            },
             'criteria': {
                 'min_price': self.min_price,
                 'max_price': self.max_price,
@@ -487,20 +576,13 @@ class OracleMarketScanner:
     def quick_scan(self, tickers: List[str] = None) -> Dict:
         """
         Quick scan of a specific list of tickers.
+        PRODUCTION-GRADE: Uses DYNAMIC discovery if no tickers provided.
         
         Useful for scanning watchlists or specific sectors.
         """
         if tickers is None:
-            # Default to most active/popular stocks
-            tickers = [
-                'AAPL', 'TSLA', 'NVDA', 'AMD', 'AMZN', 'META', 'GOOGL', 'MSFT',
-                'PLTR', 'SOFI', 'COIN', 'MARA', 'RIOT', 'GME', 'AMC',
-                'NIO', 'RIVN', 'LCID', 'XPEV', 'LI',
-                'MRNA', 'BNTX', 'PFE', 'ABBV', 'LLY',
-                'JPM', 'BAC', 'GS', 'MS', 'V', 'MA',
-                'XOM', 'CVX', 'COP', 'OXY', 'SLB',
-                'SMCI', 'ARM', 'IONQ', 'RGTI', 'QUBT'
-            ]
+            # DYNAMIC DISCOVERY - Get TODAY'S most active stocks
+            tickers = self._get_stock_universe()  # Full dynamic discovery
         
         print(f"\n🔮 Quick Oracle Scan - {len(tickers)} stocks")
         print("-" * 40)
@@ -517,13 +599,42 @@ class OracleMarketScanner:
         
         five_to_one = [r for r in results if r['meets_5_to_1']]
         
+        # Add date/time context for production accuracy
+        now = datetime.now()
+        market_open = now.replace(hour=9, minute=30, second=0)
+        market_close = now.replace(hour=16, minute=0, second=0)
+        is_market_hours = market_open <= now <= market_close and now.weekday() < 5
+        
+        if now < market_open:
+            session = 'PRE_MARKET'
+        elif now > market_close:
+            session = 'AFTER_HOURS'
+        elif now.weekday() >= 5:
+            session = 'WEEKEND'
+        else:
+            if now < now.replace(hour=10, minute=30):
+                session = 'OPENING_VOLATILITY'
+            elif now < now.replace(hour=12, minute=0):
+                session = 'MORNING_MOMENTUM'
+            elif now < now.replace(hour=14, minute=0):
+                session = 'MIDDAY_CONSOLIDATION'
+            else:
+                session = 'POWER_HOUR'
+        
         return {
             'status': 'success',
             'timestamp': datetime.now().isoformat(),
             'stocks_scanned': len(tickers),
             'results': results,
             'five_to_one_setups': five_to_one,
-            'five_to_one_count': len(five_to_one)
+            'five_to_one_count': len(five_to_one),
+            'market_context': {
+                'is_market_hours': is_market_hours,
+                'trading_session': session,
+                'scan_time': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'day_of_week': now.strftime('%A'),
+                'dynamic_universe_size': len(tickers)
+            }
         }
 
 
