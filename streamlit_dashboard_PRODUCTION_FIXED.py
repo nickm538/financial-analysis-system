@@ -797,27 +797,40 @@ show_analysis = (analyze_button and ticker) or (st.session_state.get('show_analy
 if show_analysis:
     # Use stored ticker if available
     ticker = st.session_state.get('analyzed_ticker', ticker) if not (analyze_button and ticker) else ticker
-    with st.spinner(f"🔍 Analyzing {ticker} with cached data (avoiding rate limits)..."):
+    
+    try:
+        with st.spinner(f"🔍 Analyzing {ticker} with cached data (avoiding rate limits)..."):
 
-        # Get cached price data
-        price_data = get_price_data_cached(ticker)
-        current_price = price_data['current_price']
-        change = price_data['change']
-        change_pct = price_data['change_pct']
-        info = price_data['info']
+            # Get cached price data with error handling
+            try:
+                price_data = get_price_data_cached(ticker)
+            except Exception as e:
+                st.error(f"❌ Error fetching price data: {e}")
+                price_data = _get_empty_price_data()
+            
+            current_price = price_data.get('current_price', 0) or 0
+            change = price_data.get('change', 0) or 0
+            change_pct = price_data.get('change_pct', 0) or 0
+            info = price_data.get('info', {}) or {}
 
         # Price header
+        # Safely extract values with defaults
+        volume = price_data.get('volume', 0) or 0
+        market_cap = price_data.get('market_cap', 0) or 0
+        fifty_two_week_low = price_data.get('fifty_two_week_low', 0) or 0
+        fifty_two_week_high = price_data.get('fifty_two_week_high', 0) or 0
+        
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
-            st.metric("💰 Current Price", f"${current_price:.2f}")
+            st.metric("💰 Current Price", f"${current_price:.2f}" if current_price else "N/A")
         with col2:
             st.metric("📊 Change", f"${change:.2f}", f"{change_pct:+.2f}%")
         with col3:
-            st.metric("📈 Volume", f"{price_data['volume']:,}")
+            st.metric("📈 Volume", f"{volume:,}" if volume else "N/A")
         with col4:
-            st.metric("🏢 Market Cap", f"${price_data['market_cap']/1e9:.2f}B" if price_data['market_cap'] > 0 else "N/A")
+            st.metric("🏢 Market Cap", f"${market_cap/1e9:.2f}B" if market_cap > 0 else "N/A")
         with col5:
-            st.metric("📅 52W Range", f"${price_data['fifty_two_week_low']:.0f} - ${price_data['fifty_two_week_high']:.0f}")
+            st.metric("📅 52W Range", f"${fifty_two_week_low:.0f} - ${fifty_two_week_high:.0f}" if fifty_two_week_low and fifty_two_week_high else "N/A")
 
         st.markdown("---")
 
@@ -3657,6 +3670,13 @@ if show_analysis:
             else:
                 st.error("❌ Breakout Detector module not available")
 
+    except Exception as main_error:
+        st.error(f"❌ Critical Error During Analysis: {main_error}")
+        st.warning("The analysis encountered an error. Please try again or try a different ticker.")
+        import traceback
+        with st.expander("🔧 Technical Details (for debugging)"):
+            st.code(traceback.format_exc())
+        st.info("👈 **Enter a stock symbol in the sidebar and click 'Analyze Stock' to try again**")
 
 else:
     # Welcome screen
