@@ -2428,6 +2428,36 @@ if show_analysis:
             st.markdown("### 🔍 Full Market 5:1 Scanner")
             st.markdown("Scan the entire market for stocks meeting Tim Bohen's 5:1 reward-risk criteria.")
             
+            # Smart Money Time Context Alert
+            try:
+                from smart_money_detector import SmartMoneyDetector
+                smd = SmartMoneyDetector()
+                time_ctx = smd.get_current_time_context()
+                
+                # Display time context
+                time_col1, time_col2, time_col3, time_col4 = st.columns(4)
+                with time_col1:
+                    st.metric("📅 Day", time_ctx['day_of_week'])
+                with time_col2:
+                    st.metric("⏰ Session", time_ctx['session'])
+                with time_col3:
+                    friday_status = "🟢 YES" if time_ctx['is_friday'] else "⚪ No"
+                    st.metric("📆 Friday?", friday_status)
+                with time_col4:
+                    pm_status = "🚨 ACTIVE" if time_ctx['is_friday_afternoon'] else "⚪ No"
+                    st.metric("🎯 Fri PM Window", pm_status)
+                
+                # Friday afternoon alert
+                if time_ctx.get('friday_afternoon_alert'):
+                    st.warning(time_ctx['friday_afternoon_alert'])
+                
+                # Expiration alerts
+                if time_ctx.get('expiration_alert'):
+                    st.info(time_ctx['expiration_alert'])
+                    
+            except Exception as e:
+                pass  # Silently fail if Smart Money module not available
+            
             scan_col1, scan_col2 = st.columns([1, 3])
             
             with scan_col1:
@@ -3385,6 +3415,117 @@ if show_analysis:
                 st.error(f"❌ Error in Dark Pool analysis: {e}")
                 import traceback
                 st.code(traceback.format_exc())
+            
+            # ==================== SMART MONEY DETECTION ====================
+            st.markdown("---")
+            st.markdown("### 🧠 Smart Money Detection")
+            st.markdown("*Institutional-grade detection of dark pool activity, insider flow, market maker traps, and gamma exposure*")
+            
+            try:
+                from smart_money_detector import SmartMoneyDetector
+                
+                smd = SmartMoneyDetector()
+                
+                # Time Context Display
+                time_ctx = smd.get_current_time_context()
+                
+                # Friday afternoon alert
+                if time_ctx.get('friday_afternoon_alert'):
+                    st.warning(time_ctx['friday_afternoon_alert'])
+                
+                if time_ctx.get('expiration_alert'):
+                    st.info(time_ctx['expiration_alert'])
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Session", time_ctx['session'])
+                with col2:
+                    st.metric("Day", time_ctx['day_of_week'])
+                with col3:
+                    is_friday = "✅ YES" if time_ctx['is_friday'] else "❌ No"
+                    st.metric("Friday?", is_friday)
+                
+                with st.spinner(f"🧠 Running Smart Money analysis for {ticker}..."):
+                    # Volume Analysis
+                    vol_analysis = smd.detect_volume_anomalies(ticker)
+                    
+                    if 'error' not in vol_analysis:
+                        st.markdown("#### 📊 Volume Anomaly Detection")
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            ratio = vol_analysis.get('volume_vs_30d_ratio', 0)
+                            color = "normal" if ratio < 1.5 else "off"
+                            st.metric("Vol vs 30d Avg", f"{ratio:.2f}x")
+                        with col2:
+                            st.metric("Direction", vol_analysis.get('direction', 'N/A'))
+                        with col3:
+                            st.metric("Dark Pool Likelihood", vol_analysis.get('dark_pool_likelihood', 'N/A'))
+                        with col4:
+                            st.metric("Urgency Score", vol_analysis.get('urgency_score', 0))
+                        
+                        if vol_analysis.get('signals'):
+                            for signal in vol_analysis['signals']:
+                                st.markdown(f"- {signal}")
+                    
+                    # Market Maker Trap Detection
+                    trap_analysis = smd.detect_market_maker_traps(ticker)
+                    
+                    if 'error' not in trap_analysis:
+                        st.markdown("#### 🎯 Market Maker Trap Detection")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Risk Level", trap_analysis.get('risk_level', 'N/A'))
+                        with col2:
+                            st.metric("Traps Detected", trap_analysis.get('trap_count', 0))
+                        with col3:
+                            st.metric("Trap Score", trap_analysis.get('trap_score', 0))
+                        
+                        if trap_analysis.get('traps_detected'):
+                            for trap in trap_analysis['traps_detected'][:5]:
+                                st.markdown(f"- **{trap['type']}**: {trap['description']}")
+                        
+                        st.info(trap_analysis.get('recommendation', ''))
+                    
+                    # Gamma Exposure Estimate
+                    gamma_analysis = smd.calculate_gamma_exposure_estimate(ticker)
+                    
+                    if 'error' not in gamma_analysis:
+                        st.markdown("#### 📈 Gamma Exposure Estimate")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Gamma Regime", gamma_analysis.get('gamma_regime', 'N/A'))
+                        with col2:
+                            st.metric("Est. Max Pain", f"${gamma_analysis.get('estimated_max_pain', 0)}")
+                        with col3:
+                            st.metric("Pinning Likelihood", gamma_analysis.get('pinning_likelihood', 'N/A'))
+                        
+                        st.info(gamma_analysis.get('trading_implications', ''))
+                    
+                    # Insider Activity
+                    insider_analysis = smd.get_insider_activity(ticker)
+                    
+                    if 'error' not in insider_analysis:
+                        st.markdown("#### 👔 Insider Activity")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Buy Count", insider_analysis.get('buy_count', 0))
+                        with col2:
+                            st.metric("Sell Count", insider_analysis.get('sell_count', 0))
+                        with col3:
+                            st.metric("Insider Sentiment", insider_analysis.get('insider_sentiment', 'N/A'))
+                        
+                        if insider_analysis.get('insider_signals'):
+                            for signal in insider_analysis['insider_signals'][:5]:
+                                st.markdown(f"- {signal}")
+                
+            except ImportError as e:
+                st.warning(f"Smart Money Detector module not available: {e}")
+            except Exception as e:
+                st.warning(f"Smart Money analysis error: {e}")
 
         # ==================== TAB 9: BREAKOUT DETECTOR ====================
         with tab9:

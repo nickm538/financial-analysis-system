@@ -667,6 +667,15 @@ class OracleMarketScanner:
             else:
                 session = 'POWER_HOUR'
         
+        # Add Smart Money context
+        smart_money_context = None
+        try:
+            from smart_money_detector import SmartMoneyDetector
+            smd = SmartMoneyDetector()
+            smart_money_context = smd.get_current_time_context()
+        except:
+            pass
+        
         return {
             'status': 'success',
             'timestamp': now.isoformat(),
@@ -680,7 +689,8 @@ class OracleMarketScanner:
                 'scan_time': now.strftime('%Y-%m-%d %H:%M:%S ET'),
                 'day_of_week': now.strftime('%A'),
                 'dynamic_universe_size': len(tickers)
-            }
+            },
+            'smart_money_context': smart_money_context
         }
 
 
