@@ -551,12 +551,12 @@ with st.expander("💥 **QUICK ACCESS: Breakout Detector Scanner** (Click to exp
     breakout_col1, breakout_col2 = st.columns([1, 2])
     
     with breakout_col1:
-        if st.button("💥 SCAN 125 STOCKS", key="quick_breakout_scan_btn", type="primary", help="Scans top 125 stocks & ETFs (including small caps) for breakout setups"):
+        if st.button("💥 SCAN 200 STOCKS", key="quick_breakout_scan_btn", type="primary", help="Scans top 200 stocks & ETFs (all sectors, all caps) for breakout setups"):
             try:
                 from breakout_detector import BreakoutDetector
                 bd = BreakoutDetector(TWELVEDATA_API_KEY, FINNHUB_API_KEY)
                 
-                with st.spinner("🔍 Scanning 125 stocks for breakout setups... This takes 15-18 minutes (API rate limited to 8/min)..."):
+                with st.spinner("🔍 Scanning 200+ stocks for breakout setups... This takes 20-25 minutes (API rate limited to 8/min)..."):
                     breakout_scan_results = bd.quick_scan(top_n=30)
                     st.session_state['quick_breakout_results'] = breakout_scan_results
             except Exception as e:

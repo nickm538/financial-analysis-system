@@ -1317,7 +1317,7 @@ class BreakoutDetector:
     
     def quick_scan(self, top_n: int = 20) -> Dict:
         """
-        Quick scan of 125+ stocks and ETFs for breakout setups.
+        Quick scan of 200+ stocks and ETFs for breakout setups.
         Combines predefined universe with DYNAMIC real-time discovery.
         """
         # Get dynamic tickers from today's market activity
@@ -1326,36 +1326,63 @@ class BreakoutDetector:
         quick_symbols = [
             # === MEGA CAP TECH (10) ===
             "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "AVGO", "ORCL", "ADBE",
-            # === LARGE CAP TECH (10) ===
+            # === LARGE CAP TECH (15) ===
             "CRM", "AMD", "INTC", "CSCO", "IBM", "QCOM", "TXN", "NOW", "INTU", "AMAT",
-            # === FINANCIALS (10) ===
+            "MU", "LRCX", "KLAC", "SNPS", "CDNS",
+            # === SEMICONDUCTORS (10) ===
+            "ASML", "TSM", "ARM", "MRVL", "ON", "ADI", "NXPI", "SWKS", "QRVO", "MPWR",
+            # === FINANCIALS (12) ===
             "JPM", "BAC", "WFC", "GS", "MS", "C", "BLK", "SCHW", "AXP", "USB",
-            # === PAYMENTS/FINTECH (5) ===
-            "V", "MA", "PYPL", "SQ", "COIN",
-            # === HEALTHCARE (10) ===
+            "PNC", "TFC",
+            # === PAYMENTS/FINTECH (8) ===
+            "V", "MA", "PYPL", "SQ", "COIN", "AFRM", "UPST", "NU",
+            # === HEALTHCARE (15) ===
             "UNH", "JNJ", "PFE", "ABBV", "MRK", "LLY", "TMO", "ABT", "DHR", "BMY",
-            # === CONSUMER (10) ===
+            "GILD", "REGN", "VRTX", "MRNA", "BNTX",
+            # === BIOTECH (10) ===
+            "CRSP", "BEAM", "NTLA", "EDIT", "VERV", "EXAS", "ILMN", "DXCM", "ISRG", "ALGN",
+            # === CONSUMER DISCRETIONARY (12) ===
             "WMT", "HD", "COST", "NKE", "MCD", "SBUX", "TGT", "LOW", "TJX", "DG",
-            # === ENERGY (8) ===
+            "LULU", "ROST",
+            # === CONSUMER STAPLES (8) ===
+            "PG", "KO", "PEP", "PM", "MO", "CL", "KMB", "GIS",
+            # === ENERGY (12) ===
             "XOM", "CVX", "COP", "SLB", "EOG", "MPC", "PSX", "VLO",
-            # === INDUSTRIALS (8) ===
+            "OXY", "HAL", "DVN", "FANG",
+            # === INDUSTRIALS (12) ===
             "CAT", "BA", "GE", "UPS", "RTX", "HON", "LMT", "DE",
-            # === COMMUNICATIONS (5) ===
-            "NFLX", "DIS", "CMCSA", "T", "VZ",
-            # === POPULAR MOMENTUM/GROWTH (10) ===
-            "PLTR", "SOFI", "HOOD", "RIVN", "LCID", "NIO", "MARA", "RIOT", "AFRM", "UPST",
-            # === SMALL CAP STOCKS (20) ===
-            "PLUG", "FCEL", "SPCE", "AMC",
-            "CRSP", "BEAM", "NTLA", "EDIT", "VERV",
-            "IONQ", "RGTI", "QUBT",
-            "SMCI", "AI", "BBAI", "SOUN",
-            "RKLB", "LUNR", "RDW",
+            "FDX", "UNP", "CSX", "NSC",
+            # === COMMUNICATIONS (8) ===
+            "NFLX", "DIS", "CMCSA", "T", "VZ", "TMUS", "CHTR", "WBD",
+            # === REAL ESTATE (5) ===
+            "AMT", "PLD", "CCI", "EQIX", "SPG",
+            # === UTILITIES (5) ===
+            "NEE", "DUK", "SO", "D", "AEP",
+            # === POPULAR MOMENTUM/GROWTH (12) ===
+            "PLTR", "SOFI", "HOOD", "RIVN", "LCID", "NIO", "MARA", "RIOT", "CLSK", "HUT",
+            "BITF", "CORZ",
+            # === EV/AUTO (8) ===
+            "TSLA", "F", "GM", "RIVN", "LCID", "NIO", "XPEV", "LI",
+            # === AI/DATA CENTER (10) ===
+            "SMCI", "AI", "BBAI", "SOUN", "PATH", "SNOW", "DDOG", "NET", "CRWD", "ZS",
+            # === QUANTUM COMPUTING (5) ===
+            "IONQ", "RGTI", "QUBT", "ARQQ", "QBTS",
+            # === SPACE/AEROSPACE (6) ===
+            "RKLB", "LUNR", "RDW", "SPCE", "ASTS", "BKSY",
+            # === MEME/RETAIL FAVORITES (8) ===
+            "GME", "AMC", "BB", "NOK", "WISH", "CLOV", "SOFI", "PLTR",
+            # === CANNABIS (5) ===
+            "TLRY", "CGC", "ACB", "SNDL", "CRON",
+            # === CHINESE ADRs (8) ===
+            "BABA", "JD", "PDD", "BIDU", "NTES", "LI", "XPEV", "NIO",
+            # === CLEAN ENERGY (6) ===
+            "PLUG", "FCEL", "ENPH", "SEDG", "RUN", "NOVA",
             # === SMALL CAP ETFs (5) ===
             "IJR", "VB", "SCHA", "VTWO", "IWO",
-            # === MAJOR ETFs (14) ===
-            "SPY", "QQQ", "IWM", "DIA",
-            "XLF", "XLE", "XLK", "XLV", "XLI", "XLY", "XLP", "XLU",
-            "GLD", "SLV",
+            # === MAJOR ETFs (20) ===
+            "SPY", "QQQ", "IWM", "DIA", "VOO", "VTI",
+            "XLF", "XLE", "XLK", "XLV", "XLI", "XLY", "XLP", "XLU", "XLB", "XLRE",
+            "GLD", "SLV", "USO", "TLT",
         ]
         
         # Combine predefined with dynamic discovery (no duplicates)
