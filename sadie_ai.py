@@ -47,6 +47,13 @@ try:
 except ImportError:
     FINANCIALDATASETS_AVAILABLE = False
 
+# Web Scraper integration (Firecrawl for real-time data)
+try:
+    from web_scraper import SadieWebDataProvider
+    WEB_SCRAPER_AVAILABLE = True
+except ImportError:
+    WEB_SCRAPER_AVAILABLE = False
+
 # Smart Money Tracker integration
 try:
     from smart_money_tracker import SmartMoneyTracker
@@ -222,6 +229,9 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
         # Initialize Unified Market Context Engine (Macro + Micro equally weighted)
         self.market_context = MarketContextEngine() if MARKET_CONTEXT_AVAILABLE else None
         
+        # Initialize Web Scraper for real-time data (fills API gaps)
+        self.web_scraper = SadieWebDataProvider() if WEB_SCRAPER_AVAILABLE else None
+        
         # Conversation history for context
         self.conversation_history = []
         
@@ -364,7 +374,18 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
             except Exception as e:
                 analysis["engines"]["smart_money"] = {"status": "error", "error": str(e)}
         
-        # 8. Unified Market Context (Macro + Micro equally weighted)
+        # 8. Web Scraper - Real-time data to fill API gaps (options chain, news, etc.)
+        if self.web_scraper:
+            try:
+                web_data = self.web_scraper.get_complete_analysis_data(symbol)
+                if web_data:
+                    analysis["engines"]["web_scraped"] = web_data
+                    # Also get formatted version for prompt injection
+                    analysis["web_scraped_prompt"] = self.web_scraper.format_for_prompt_injection(web_data)
+            except Exception as e:
+                analysis["engines"]["web_scraped"] = {"status": "error", "error": str(e)}
+        
+        # 9. Unified Market Context (Macro + Micro equally weighted)
         if self.market_context:
             try:
                 unified_context = self.market_context.get_unified_context(symbol)
@@ -647,6 +668,31 @@ Remember: Real money is on the line. Be thorough, be precise, be profitable."""
             # Recommendation
             if sm.get("recommendation"):
                 sections.append(f"  RECOMMENDATION: {sm.get('recommendation')}")
+            sections.append("")
+        
+        # Web Scraped Real-Time Data (Firecrawl - fills API gaps)
+        if engines.get("web_scraped"):
+            ws = engines["web_scraped"]
+            sections.append("🌐 REAL-TIME WEB DATA (Firecrawl - VERIFIED CURRENT):")
+            sections.append(f"  Data Sources: {', '.join(ws.get('data_sources', []))}")
+            sections.append(f"  Scraped At: {ws.get('timestamp', 'N/A')}")
+            
+            # Options from web scrape
+            opts = ws.get("options", {})
+            if opts.get("status") == "success":
+                summary = opts.get("summary", {})
+                sections.append(f"  [LIVE] Put/Call Ratio: {summary.get('put_call_ratio', 'N/A')}")
+                sections.append(f"  [LIVE] Max Pain Strike: ${summary.get('max_pain_strike', 'N/A')}")
+                sections.append(f"  [LIVE] Total Call Volume: {summary.get('total_call_volume', 0):,}")
+                sections.append(f"  [LIVE] Total Put Volume: {summary.get('total_put_volume', 0):,}")
+                
+                unusual = summary.get("unusual_activity", [])
+                if unusual:
+                    sections.append("  [LIVE] UNUSUAL OPTIONS ACTIVITY:")
+                    for u in unusual[:3]:
+                        sections.append(f"    🚨 {u['type'].upper()} ${u['strike']}: Vol {u['volume']:,}, OI {u['open_interest']:,}")
+            
+            sections.append("  ⚠️ CRITICAL: Use these LIVE numbers, do NOT hallucinate or estimate.")
             sections.append("")
         
         # Unified Market Context (Macro + Micro equally weighted)
