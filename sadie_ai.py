@@ -2,7 +2,7 @@
 ================================================================================
 SADIE - SUPREME ANALYTICAL & DECISION INTELLIGENCE ENGINE
 ================================================================================
-An institutional-grade AI financial chatbot powered by GPT-5 thinking mode.
+An institutional-grade AI financial chatbot powered by Google Gemini 2.5 Pro + Perplexity Sonar Pro.
 
 Integrates ALL financial engines:
 - Breakout Detector (NR patterns, TTM Squeeze, OBV, S/R, ADX, RSI)
@@ -61,8 +61,15 @@ try:
 except ImportError:
     MARKET_CONTEXT_AVAILABLE = False
 
-# OpenAI client
+# OpenAI client (fallback)
 from openai import OpenAI
+
+# Multi-model LLM providers (Gemini 2.5 Pro + Perplexity Sonar Pro)
+try:
+    from llm_providers import MultiModelOrchestrator, GeminiProvider, PerplexityProvider
+    MULTI_MODEL_AVAILABLE = True
+except ImportError:
+    MULTI_MODEL_AVAILABLE = False
 
 
 class SadieAI:
@@ -174,19 +181,30 @@ When you receive market data, analyze it thoroughly using your "thinking" capabi
 Remember: Real money is on the line. Be thorough, be precise, be profitable."""
 
     def __init__(self):
-        """Initialize Sadie with all financial engines and OpenAI client."""
-        # Get API key from environment
+        """Initialize Sadie with all financial engines and multi-model LLM providers."""
+        # Initialize multi-model orchestrator (Gemini 2.5 Pro + Perplexity Sonar Pro)
+        if MULTI_MODEL_AVAILABLE:
+            try:
+                self.orchestrator = MultiModelOrchestrator()
+                self.use_multi_model = True
+                print("[Sadie] Using Gemini 2.5 Pro + Perplexity Sonar Pro")
+            except Exception as e:
+                print(f"[Sadie] Multi-model init failed: {e}, falling back to OpenAI")
+                self.use_multi_model = False
+        else:
+            self.use_multi_model = False
+        
+        # OpenAI client (fallback)
         api_key = os.environ.get('OPENAI_API_KEY')
-        
-        # Validate API key exists
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
-        
-        # Initialize OpenAI client
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url=os.environ.get('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        )
+        if api_key:
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=os.environ.get('OPENAI_API_BASE', 'https://api.openai.com/v1')
+            )
+        else:
+            self.client = None
+            if not self.use_multi_model:
+                raise ValueError("No LLM provider available. Set GEMINI_API_KEY or OPENAI_API_KEY")
         
         # Initialize financial engines
         self.breakout_detector = BreakoutDetector()
@@ -729,41 +747,44 @@ Analyze the data thoroughly using your thinking capabilities. Consider multiple 
             # Add current message
             messages.append({"role": "user", "content": full_prompt})
             
-            # Call GPT-5 with thinking mode (reasoning effort set to high)
-            response = self.client.chat.completions.create(
-                model="gpt-5",  # or "o1" for reasoning model
-                messages=messages,
-                max_completion_tokens=4096,
-                temperature=1,  # Required for reasoning models
-                reasoning_effort="high"  # Maximum thinking power
-            )
+            # Use multi-model orchestrator (Gemini 2.5 Pro + Perplexity Sonar Pro) as primary
+            if self.use_multi_model:
+                result = self.orchestrator.analyze(
+                    user_query=user_message,
+                    system_prompt=self.SYSTEM_PROMPT,
+                    market_data=data_context
+                )
+                
+                if result.get("status") == "success":
+                    assistant_message = result.get("response", "")
+                    
+                    # Store in conversation history
+                    self.conversation_history.append({
+                        "user": user_message,
+                        "assistant": assistant_message,
+                        "timestamp": datetime.now().isoformat(),
+                        "symbols": symbols
+                    })
+                    
+                    # Keep history manageable
+                    if len(self.conversation_history) > 20:
+                        self.conversation_history = self.conversation_history[-20:]
+                    
+                    return {
+                        "status": "success",
+                        "response": assistant_message,
+                        "symbols_analyzed": symbols,
+                        "timestamp": datetime.now().isoformat(),
+                        "model": result.get("model", "gemini-2.5-pro + perplexity-sonar-pro"),
+                        "thinking_mode": "multi-model",
+                        "research": result.get("research", {})
+                    }
+                else:
+                    # Fall through to OpenAI fallback
+                    raise Exception(result.get("error", "Multi-model failed"))
             
-            assistant_message = response.choices[0].message.content
-            
-            # Store in conversation history
-            self.conversation_history.append({
-                "user": user_message,
-                "assistant": assistant_message,
-                "timestamp": datetime.now().isoformat(),
-                "symbols": symbols
-            })
-            
-            # Keep history manageable
-            if len(self.conversation_history) > 20:
-                self.conversation_history = self.conversation_history[-20:]
-            
-            return {
-                "status": "success",
-                "response": assistant_message,
-                "symbols_analyzed": symbols,
-                "timestamp": datetime.now().isoformat(),
-                "model": "gpt-5",
-                "thinking_mode": "high"
-            }
-            
-        except Exception as e:
-            # Fallback to gpt-4o if gpt-5 not available
-            try:
+            # OpenAI fallback (if multi-model not available or failed)
+            if self.client:
                 response = self.client.chat.completions.create(
                     model="gpt-4o",
                     messages=messages,
@@ -773,6 +794,18 @@ Analyze the data thoroughly using your thinking capabilities. Consider multiple 
                 
                 assistant_message = response.choices[0].message.content
                 
+                # Store in conversation history
+                self.conversation_history.append({
+                    "user": user_message,
+                    "assistant": assistant_message,
+                    "timestamp": datetime.now().isoformat(),
+                    "symbols": symbols
+                })
+                
+                # Keep history manageable
+                if len(self.conversation_history) > 20:
+                    self.conversation_history = self.conversation_history[-20:]
+                
                 return {
                     "status": "success",
                     "response": assistant_message,
@@ -781,6 +814,30 @@ Analyze the data thoroughly using your thinking capabilities. Consider multiple 
                     "model": "gpt-4o (fallback)",
                     "thinking_mode": "standard"
                 }
+            else:
+                raise Exception("No LLM provider available")
+            
+        except Exception as e:
+            # Final fallback attempt with gpt-4o
+            try:
+                if self.client:
+                    response = self.client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=messages,
+                        max_tokens=4096,
+                        temperature=0.7
+                    )
+                    
+                    assistant_message = response.choices[0].message.content
+                    
+                    return {
+                        "status": "success",
+                        "response": assistant_message,
+                        "symbols_analyzed": symbols,
+                        "timestamp": datetime.now().isoformat(),
+                        "model": "gpt-4o (emergency fallback)",
+                        "thinking_mode": "standard"
+                    }
             except Exception as e2:
                 return {
                     "status": "error",
