@@ -1685,43 +1685,85 @@ if show_analysis:
                 # Cash Flow Metrics
                 st.markdown("---")
                 st.markdown("### 💵 Cash Flow Metrics")
+                st.caption("📅 **Period: TTM (Trailing Twelve Months)** - All cash flow metrics represent the last 12 months of data")
+                
+                # User Education Expander
+                with st.expander("📚 What do these metrics mean?"):
+                    st.markdown("""
+                    **Operating Cash Flow (OCF)**: Cash generated from normal business operations. Positive OCF means the company generates cash from its core business.
+                    
+                    **Free Cash Flow (FCF)**: Cash left after paying for operations and capital expenditures. This is "free" money for dividends, buybacks, or growth.
+                    
+                    **FCF Yield**: FCF as a percentage of market cap. Higher is better. >5% is excellent, 3-5% is good, <3% is low.
+                    
+                    **FCF Margin**: FCF as a percentage of revenue. Shows how efficiently the company converts sales to cash. >15% is excellent.
+                    
+                    **FCF/OCF Ratio**: What percentage of operating cash becomes free cash. >0.8 means most operating cash is "free". <0.5 means high capex needs.
+                    
+                    **CF to Debt**: How many years of cash flow needed to pay off all debt. <3 years is healthy, >5 years is concerning.
+                    """)
 
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     operating_cf = fundamentals.get('operating_cash_flow', 0)
-                    st.metric("Operating CF", formatted.get('operating_cash_flow', 'N/A'))
-                    if operating_cf > 0:
-                        st.caption("✅ Positive cash flow")
+                    st.metric("Operating CF", formatted.get('operating_cash_flow', 'N/A'), help="Cash generated from core business operations (TTM)")
+                    if operating_cf > 1_000_000_000:
+                        st.caption("✅ Excellent - generating over $1B in operating cash")
+                    elif operating_cf > 0:
+                        st.caption("✅ Positive - company generates cash from operations")
+                    elif operating_cf < 0:
+                        st.caption("⚠️ Negative - burning cash in operations")
                     else:
-                        st.caption("⚠️ Negative cash flow")
+                        st.caption("📉 No data available")
                 
                 with col2:
                     free_cf = fundamentals.get('free_cash_flow', 0)
-                    st.metric("Free Cash Flow", formatted.get('free_cash_flow', 'N/A'))
-                    if free_cf > 0:
-                        st.caption("✅ Positive FCF")
+                    market_cap = fundamentals.get('market_cap', 0)
+                    fcf_yield = (free_cf / market_cap * 100) if market_cap > 0 else 0
+                    st.metric("Free Cash Flow", formatted.get('free_cash_flow', 'N/A'), help="Cash available after operations and capex (TTM)")
+                    if free_cf > 500_000_000:
+                        st.caption(f"✅ Excellent - ${free_cf/1e9:.1f}B FCF (Yield: {fcf_yield:.1f}%)")
+                    elif free_cf > 0:
+                        if fcf_yield > 5:
+                            st.caption(f"✅ Positive FCF with strong {fcf_yield:.1f}% yield")
+                        else:
+                            st.caption(f"✅ Positive FCF (Yield: {fcf_yield:.1f}%)")
+                    elif free_cf < 0:
+                        st.caption("⚠️ Negative - company is consuming cash")
                     else:
-                        st.caption("⚠️ Negative FCF")
+                        st.caption("📉 No data available")
                 
                 with col3:
                     cf_ratio = fundamentals.get('operating_cf_ratio', 0)
-                    st.metric("Operating CF Ratio", formatted.get('operating_cf_ratio', 'N/A'))
-                    if cf_ratio > 1.2:
-                        st.caption("✅ Strong cash generation")
+                    st.metric("Operating CF Ratio", formatted.get('operating_cf_ratio', 'N/A'), help="Operating cash flow as % of revenue (TTM)")
+                    if cf_ratio > 1.5:
+                        st.caption(f"✅ Exceptional - {cf_ratio:.1%} of revenue becomes cash")
+                    elif cf_ratio > 1.2:
+                        st.caption(f"✅ Strong - {cf_ratio:.1%} cash conversion")
                     elif cf_ratio > 0.8:
-                        st.caption("📊 Adequate cash flow")
+                        st.caption(f"📊 Adequate - {cf_ratio:.1%} cash conversion")
+                    elif cf_ratio > 0:
+                        st.caption(f"⚠️ Weak - only {cf_ratio:.1%} of revenue becomes cash")
                     else:
-                        st.caption("⚠️ Weak cash conversion")
+                        st.caption("📉 No data available")
 
                 with col4:
                     cf_debt = fundamentals.get('cf_to_debt', 0)
-                    st.metric("CF to Debt", formatted.get('cf_to_debt', 'N/A'))
+                    total_debt = fundamentals.get('total_debt', 0)
+                    st.metric("CF to Debt", formatted.get('cf_to_debt', 'N/A'), help="Years of cash flow needed to pay off all debt (TTM)")
                     if cf_debt > 0.5:
-                        st.caption("✅ Can service debt easily")
+                        years_to_payoff = 1 / cf_debt if cf_debt > 0 else 0
+                        st.caption(f"✅ Excellent - could pay off debt in {years_to_payoff:.1f} years")
                     elif cf_debt > 0.2:
-                        st.caption("📊 Adequate debt coverage")
+                        years_to_payoff = 1 / cf_debt if cf_debt > 0 else 0
+                        st.caption(f"📊 Adequate - {years_to_payoff:.1f} years to pay off debt")
+                    elif cf_debt > 0:
+                        years_to_payoff = 1 / cf_debt if cf_debt > 0 else 0
+                        st.caption(f"⚠️ Concerning - {years_to_payoff:.0f}+ years to pay off debt")
+                    elif total_debt == 0:
+                        st.caption("✅ No debt - debt-free company")
                     else:
-                        st.caption("⚠️ Debt coverage concerns")
+                        st.caption("📉 No data available")
 
                 # Per Share Metrics
                 st.markdown("---")
@@ -1914,13 +1956,38 @@ if show_analysis:
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     rsi_interp = interpret_rsi(rsi)
-                    st.metric("RSI", f"{rsi:.1f}")
-                    st.caption(f"{rsi_interp[0]}: {rsi_interp[2]}")
+                    st.metric("RSI (14)", f"{rsi:.1f}", help="Relative Strength Index - measures momentum on 0-100 scale")
+                    # Enhanced dynamic interpretation
+                    if rsi < 30:
+                        st.caption(f"💎 **Oversold ({rsi:.1f})**: Potential bounce setup. Wait for RSI divergence or support hold before buying.")
+                    elif rsi < 40:
+                        st.caption(f"📊 **Bearish ({rsi:.1f})**: In uptrends, RSI often bounces here. In downtrends, stay cautious.")
+                    elif rsi < 50:
+                        st.caption(f"📊 **Neutral-Bearish ({rsi:.1f})**: No clear momentum. Wait for direction.")
+                    elif rsi < 60:
+                        st.caption(f"✅ **Neutral-Bullish ({rsi:.1f})**: Healthy range for trend following.")
+                    elif rsi < 70:
+                        st.caption(f"✅ **Bullish ({rsi:.1f})**: Strong momentum. In uptrends, pullbacks to 50-60 are buy opportunities.")
+                    elif rsi < 80:
+                        st.caption(f"🔴 **Overbought ({rsi:.1f})**: Extended but can stay here in strong uptrends. Watch for divergence.")
+                    else:
+                        st.caption(f"🔴 **Extremely Overbought ({rsi:.1f})**: Rare level. Take profits or tighten stops. Divergence = reversal.")
 
                 with col2:
                     macd_interp = interpret_macd(macd, macd_signal)
-                    st.metric("MACD", f"{macd:.2f}")
-                    st.caption(f"{macd_interp[0]}: {macd_interp[2]}")
+                    macd_hist = macd - macd_signal
+                    st.metric("MACD (12,26,9)", f"{macd:.2f}", help="Moving Average Convergence Divergence - trend momentum indicator")
+                    # Enhanced dynamic interpretation
+                    if macd > macd_signal and macd_hist > 0.5:
+                        st.caption(f"✅ **Strong Bullish**: MACD {macd:.2f} > Signal {macd_signal:.2f}. Histogram growing = momentum accelerating.")
+                    elif macd > macd_signal:
+                        st.caption(f"✅ **Bullish**: MACD above signal. Watch histogram - if shrinking, momentum fading.")
+                    elif macd < macd_signal and macd_hist < -0.5:
+                        st.caption(f"🔴 **Strong Bearish**: MACD {macd:.2f} < Signal {macd_signal:.2f}. Histogram growing = downside accelerating.")
+                    elif macd < macd_signal:
+                        st.caption(f"🔴 **Bearish**: MACD below signal. If histogram shrinking, reversal may be near.")
+                    else:
+                        st.caption(f"📊 **Neutral**: MACD ≈ Signal. No clear momentum. Wait for crossover.")
 
                 with col3:
                     # Stochastic K value
@@ -1931,21 +1998,25 @@ if show_analysis:
                         stoch_k = 50.0
                     st.metric("Stochastic K", f"{stoch_k:.1f}")
                     if stoch_k < 20:
-                        st.caption("💎 Oversold")
+                        st.caption(f"💎 **Oversold ({stoch_k:.1f})**: Potential bounce. Best when aligned with RSI <30.")
                     elif stoch_k > 80:
-                        st.caption("🔴 Overbought")
+                        st.caption(f"🔴 **Overbought ({stoch_k:.1f})**: Extended. Watch for bearish crossover with %D line.")
                     else:
-                        st.caption("📊 Neutral")
+                        st.caption(f"📊 **Neutral ({stoch_k:.1f})**: No extreme. Wait for move to <20 or >80.")
 
                 with col4:
                     cci = get_val(indicators.get('cci'), default=0.0)
                     st.metric("CCI", f"{cci:.1f}")
-                    if cci < -100:
-                        st.caption("💎 Oversold")
+                    if cci < -200:
+                        st.caption(f"💎 **Extremely Oversold ({cci:.0f})**: Strong reversal candidate. High probability bounce.")
+                    elif cci < -100:
+                        st.caption(f"💎 **Oversold ({cci:.0f})**: Below -100 = oversold zone. Look for reversal signals.")
+                    elif cci > 200:
+                        st.caption(f"🔴 **Extremely Overbought ({cci:.0f})**: Extended move. Take profits or tighten stops.")
                     elif cci > 100:
-                        st.caption("🔴 Overbought")
+                        st.caption(f"🔴 **Overbought ({cci:.0f})**: Above +100 = overbought zone. Watch for pullback.")
                     else:
-                        st.caption("📊 Neutral")
+                        st.caption(f"📊 **Neutral ({cci:.0f})**: Between -100 and +100. No extreme reading.")
 
                 # Trend Indicators
                 st.markdown("---")
@@ -1953,30 +2024,40 @@ if show_analysis:
 
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("ADX", f"{adx:.1f}")
-                    if adx > 25:
-                        st.caption("✅ Strong trend")
+                    st.metric("ADX (14)", f"{adx:.1f}", help="Average Directional Index - measures trend strength (not direction)")
+                    # Enhanced dynamic interpretation
+                    if adx > 50:
+                        st.caption(f"🔥 **Extreme Trend ({adx:.1f})**: Very strong trend. Don't fade it! May be exhausting soon.")
+                    elif adx > 40:
+                        st.caption(f"✅ **Very Strong Trend ({adx:.1f})**: Powerful directional move. Trend following works best here.")
+                    elif adx > 25:
+                        st.caption(f"✅ **Strong Trend ({adx:.1f})**: Clear direction. Good environment for trend trades.")
                     elif adx > 20:
-                        st.caption("📊 Moderate trend")
+                        st.caption(f"📊 **Emerging Trend ({adx:.1f})**: Trend starting to form. Early entry opportunity if +DI/-DI confirm.")
                     else:
-                        st.caption("⚠️ Weak trend")
+                        st.caption(f"⚠️ **No Trend ({adx:.1f})**: Choppy, range-bound. Range trading or stay out. Breakouts often fail.")
 
                 with col2:
                     # Williams %R
                     williams = get_val(indicators.get('williams_r'), default=-50.0)
                     st.metric("Williams %R", f"{williams:.1f}")
                     if williams < -80:
-                        st.caption("💎 Oversold")
+                        st.caption(f"💎 **Oversold ({williams:.1f})**: Below -80 = oversold. Potential bounce if support holds.")
                     elif williams > -20:
-                        st.caption("🔴 Overbought")
+                        st.caption(f"🔴 **Overbought ({williams:.1f})**: Above -20 = overbought. Pullback likely.")
                     else:
-                        st.caption("📊 Neutral")
+                        st.caption(f"📊 **Neutral ({williams:.1f})**: Between -20 and -80. No extreme reading.")
 
                 with col3:
                     # ATR (Average True Range)
                     atr = get_val(indicators.get('atr'), default=0.0)
-                    st.metric("ATR", f"{atr:.2f}")
-                    st.caption("Volatility measure")
+                    st.metric("ATR (14)", f"{atr:.2f}", help="Average True Range - measures volatility (higher = more volatile)")
+                    if atr > 5:
+                        st.caption(f"🔥 **High Volatility**: ATR {atr:.2f} = wide swings. Use wider stops.")
+                    elif atr > 2:
+                        st.caption(f"📊 **Moderate Volatility**: ATR {atr:.2f} = normal range.")
+                    else:
+                        st.caption(f"📉 **Low Volatility**: ATR {atr:.2f} = tight range. Breakout may be coming.")
 
                 with col4:
                     # Bollinger Bands position
